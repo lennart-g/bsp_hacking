@@ -1,17 +1,11 @@
-import struct
-import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw
-from statistics import mean
 import copy
 import os
-from PIL import WalImageFile
-from numpy import arctan
-import math
-from typing import List, Tuple, Optional
-from Q2BSP import *
-from dataclasses import dataclass
+from typing import Optional
+
 import numpy as np
-import operator
+from PIL import WalImageFile
+
+from Q2BSP import *
 
 
 @dataclass
@@ -38,7 +32,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # get a list of unique texture names (which are stored without an extension -> multiple ones must be tested)
     texture_list = [x.get_texture_name() for x in temp_map.tex_infos]
     texture_list_cleaned = list(dict.fromkeys(texture_list))
-
+    print(texture_list_cleaned)
     # iterate through texture list, look which one exists, load, rescale to 1×1 pixel = color is mean color
     average_colors = list()
     for texture in texture_list_cleaned:
@@ -113,10 +107,6 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     min_y = min([a[1] for b in faces for a in b])
     min_z = min([a[2] for b in faces for a in b])
 
-    # TODO: rounding here and after rotating increases error
-    # polys_normalized = [[[round(vertex[0] - min_x),
-    #                       round(vertex[1] - min_y),
-    #                       round(vertex[2] - min_z)] for vertex in edge] for edge in faces]
     polys_normalized = [[[vertex[0] - min_x,
                           vertex[1] - min_y,
                           vertex[2] - min_z] for vertex in edge] for edge in faces]
@@ -128,7 +118,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
         if not face.plane_side == 0:
             # -1*0.0 returns -0.0 which is prevented by this expression
             # TODO: Does -0.0 do any harm here?
-            normal = [-1*x if not x == 0.0 else x for x in normal_list[face.plane]]
+            normal = [-1 * x if not x == 0.0 else x for x in normal_list[face.plane]]
         else:
             normal = list(normal_list[face.plane])
         normals.append(normal)
@@ -139,6 +129,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     for idx, poly in enumerate(polys_normalized):
         polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
         polygons.append(polygon)
+
     return polygons, average_colors
 
 
@@ -151,79 +142,84 @@ def sort_by_axis(faces: List[Polygon], axis: int) -> List[Polygon]:
     :return: sorted list of Polygons
     """
     faces = copy.deepcopy(faces)
-    order = [mean(depth_coordinate) for depth_coordinate in [[vert[axis] for vert in face] for face in [face.vertices for face in faces]]]
-    faces_sorted = [x for _, x in sorted(zip(order, faces), key=operator.itemgetter(0), reverse=True)]
+    order = [mean(depth_coordinate) for depth_coordinate in
+             [[vert[axis] for vert in face] for face in [face.vertices for face in faces]]]
+    faces_sorted = [x for _, x in sorted(zip(order, faces), key=operator.itemgetter(0), reverse=False)]
     return faces_sorted
 
 
 def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle: float) -> List[Polygon]:
+    """
+    Applies matrix rotations by z, y, x axis in this order on vertices and normals
+    :param polys: list of Polygons
+    :param x_angle: rotation angle in degrees
+    :param y_angle: rotation angle in degrees
+    :param z_angle: rotation angle in degrees
+    :return: rotated Polygon list
+    """
     faces = copy.deepcopy(polys)
-    # if not z_angle == 0:
-    for idx0, face in enumerate(faces):
-        for idx1, vertex in enumerate(face.vertices):
-            old_x, old_y, old_z = faces[idx0].vertices[idx1]
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
-            faces[idx0].vertices[idx1][0] = math.cos(math.radians(z_angle)) * old_x - math.sin(
-                math.radians(z_angle)) * old_y
-            faces[idx0].vertices[idx1][1] = math.sin(math.radians(z_angle)) * old_x + math.cos(
-                math.radians(z_angle)) * old_y
+    if not z_angle == 0:  # should speed things up because vertices would be left unchanged with angle == 0 anyway
+        for idx0, face in enumerate(faces):
+            # rotate each vertex
+            for idx1, vertex in enumerate(face.vertices):
+                old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
+                faces[idx0].vertices[idx1][0] = math.cos(math.radians(z_angle)) * old_x - math.sin(
+                    math.radians(z_angle)) * old_y
+                faces[idx0].vertices[idx1][1] = math.sin(math.radians(z_angle)) * old_x + math.cos(
+                    math.radians(z_angle)) * old_y
+            # rotate normals once per face
             faces[idx0].normal.x = math.cos(math.radians(z_angle)) * old_normal_x - math.sin(
                 math.radians(z_angle)) * old_normal_y
             faces[idx0].normal.y = math.sin(math.radians(z_angle)) * old_normal_x + math.cos(
                 math.radians(z_angle)) * old_normal_y
-    # if not x_angle == 0:
-    for idx0, face in enumerate(faces):
-        for idx1, vertex in enumerate(face.vertices):
-            old_x, old_y, old_z = faces[idx0].vertices[idx1]
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
-            faces[idx0].vertices[idx1][1] = math.cos(math.radians(x_angle)) * old_y - math.sin(
-                math.radians(x_angle)) * old_z
-            faces[idx0].vertices[idx1][2] = math.sin(math.radians(x_angle)) * old_y + math.cos(
-                math.radians(x_angle)) * old_z
-            faces[idx0].normal.y = math.cos(math.radians(x_angle)) * old_normal_y - math.sin(
-                math.radians(x_angle)) * old_normal_z
-            faces[idx0].normal.z = math.sin(math.radians(x_angle)) * old_normal_y + math.cos(
-                math.radians(x_angle)) * old_normal_z
-    # if not y_angle == 0:
-    for idx0, face in enumerate(faces):
-        for idx1, vertex in enumerate(face.vertices):
-            old_x, old_y, old_z = faces[idx0].vertices[idx1]
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
-            faces[idx0].vertices[idx1][0] = math.cos(math.radians(y_angle)) * old_x + math.sin(
-                math.radians(y_angle)) * old_z
-            faces[idx0].vertices[idx1][2] = -math.sin(math.radians(y_angle)) * old_x + math.cos(
-                math.radians(y_angle)) * old_z
+
+    if not y_angle == 0:
+        for idx0, face in enumerate(faces):
+            for idx1, vertex in enumerate(face.vertices):
+                old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
+                faces[idx0].vertices[idx1][0] = math.cos(math.radians(y_angle)) * old_x + math.sin(
+                    math.radians(y_angle)) * old_z
+                faces[idx0].vertices[idx1][2] = -math.sin(math.radians(y_angle)) * old_x + math.cos(
+                    math.radians(y_angle)) * old_z
             faces[idx0].normal.x = math.cos(math.radians(y_angle)) * old_normal_x + math.sin(
                 math.radians(y_angle)) * old_normal_z
             faces[idx0].normal.z = -math.sin(math.radians(y_angle)) * old_normal_x + math.cos(
                 math.radians(y_angle)) * old_normal_z
 
-    # print(faces)
-    # print([[vert[0] for vert in face.vertices] for face in faces])
+    if not x_angle == 0:
+        for idx0, face in enumerate(faces):
+            for idx1, vertex in enumerate(face.vertices):
+                old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
+                faces[idx0].vertices[idx1][1] = math.cos(math.radians(x_angle)) * old_y - math.sin(
+                    math.radians(x_angle)) * old_z
+                faces[idx0].vertices[idx1][2] = math.sin(math.radians(x_angle)) * old_y + math.cos(
+                    math.radians(x_angle)) * old_z
+            faces[idx0].normal.y = math.cos(math.radians(x_angle)) * old_normal_y - math.sin(
+                math.radians(x_angle)) * old_normal_z
+            faces[idx0].normal.z = math.sin(math.radians(x_angle)) * old_normal_y + math.cos(
+                math.radians(x_angle)) * old_normal_z
+
+    # moves all polys so that all coordinate values >= 0
     min_x = min([a for b in [[vert[0] for vert in face.vertices] for face in faces] for a in b])
     min_y = min([a for b in [[vert[1] for vert in face.vertices] for face in faces] for a in b])
     min_z = min([a for b in [[vert[2] for vert in face.vertices] for face in faces] for a in b])
-    # polys_normalized = [[[round(vertex[0] - min_x),
-    #                       round(vertex[1] - min_y),
-    #                       round(vertex[2] - min_z)] for vertex in face.vertices] for face in faces]
-    # for idx1, face in enumerate(faces):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         faces[idx1].vertices[idx2][0] = round(vert[0] - min_x)
-    #         faces[idx1].vertices[idx2][1] = round(vert[1] - min_y)
-    #         faces[idx1].vertices[idx2][2] = round(vert[2] - min_z)
+
     for idx1, face in enumerate(faces):
         for idx2, vert in enumerate(face.vertices):
             faces[idx1].vertices[idx2][0] = vert[0] - min_x
             faces[idx1].vertices[idx2][1] = vert[1] - min_y
             faces[idx1].vertices[idx2][2] = vert[2] - min_z
-    # print([x.normal for x in faces])
+
     return faces
 
 
-def create_poly_image(polys: List[Polygon], ax, opacity=-1, x=0, y=1, title="", average_colors=None) -> Optional[
+def create_poly_image(polys: List[Polygon], ax, average_colors, title="") -> Optional[
     Image.Image]:
     """
-    Draws radar image and assigns it to axis or returns it
+    Draws radar image and assigns it to axes or returns it
     :param polys: faces of the bsp
     :param ax: axes to draw to
     :param opacity: opacity of individual faces
@@ -234,7 +230,11 @@ def create_poly_image(polys: List[Polygon], ax, opacity=-1, x=0, y=1, title="", 
     :param average_colors: 
     :return: 
     """
+    # y value will be the images x value and (max z value - z) will be images y value
+    x = 1
+    y = 2
     z = 3 - (x + y)
+    # sorted descending because the bigger the x value the further away the polygon is from camera
     polys = sort_by_axis(polys, z)
     # round vertices so they are integers and match pixel positions
     for idx1, face in enumerate(polys):
@@ -248,44 +248,26 @@ def create_poly_image(polys: List[Polygon], ax, opacity=-1, x=0, y=1, title="", 
     normals = [x.normal for x in polys]
     ids = [x.tex_id for x in polys]
     polys = [x.vertices for x in polys]
+    # to flip y upside down because of image coordinate origin
     max_y = round(max([p for i in [[vertex[y] for vertex in edge] for edge in polys] for p in i]))
     img = Image.new("RGBA",
                     (round(max([p for i in [[vertex[x] for vertex in edge] for edge in polys] for p in i])),
                      round(max([p for i in [[vertex[y] for vertex in edge] for edge in polys] for p in i]))),
                     (255, 255, 255, 100))
     draw = ImageDraw.Draw(img, "RGBA")
-    max_z = max([p for i in [[vertex[z] for vertex in edge] for edge in polys] for p in i])
-    # num_polys = 2000
-    # for i in range(num_polys):
-    #     col_a, col_b, col_c = average_colors[ids[i]]
-    #     colors = (col_a, col_b, col_c, opacity)
-    #     draw.polygon([(vert[x], max_y - vert[y]) for vert in polys[i]], fill=colors, outline=(255, 255, 255, 10))
+
     view_vector = [0, 0, 0]
-    view_vector[z] = -1
+    view_vector[z] = -1  # dynamic in case x y z values get changed again
     for idx, face in enumerate(polys):
         angle = math.degrees(np.arccos(np.dot(view_vector, list(normals[idx])) / (
-                    np.linalg.norm(view_vector) * np.linalg.norm(list(normals[idx])))))
-        # print(angle)
-        # if angle < 90:
-        #     # print(angle)
-        #     continue
-        # if average_colors[ids[idx]] == (0,0,0):
-        #     continue
-        mean_z = mean([x[z] for x in face])
-        # print("normal:", normals[idx])
-        # print("angle to 0 0 -1:", angle)
-        if opacity == -1:
-            opacity = min(255, int(180 * (1 - mean_z / max_z)))
-        col = int(510 * mean_z / max_z)
-        colors = (max(0, col - 255), 0, max(0, 255 - col), opacity)
-        if ids and average_colors:
-            print("hi")
-            col_a, col_b, col_c = average_colors[ids[idx]]
-            print(average_colors[ids[idx]])
-            colors = (col_a, col_b, col_c, opacity)
-        draw.polygon([(vert[x], max_y - vert[y]) for vert in face], fill=colors, outline=(0, 0, 0))
-    print(average_colors)
-    # print(ids)
+                np.linalg.norm(view_vector) * np.linalg.norm(list(normals[idx])))))
+        # only render faces facing in camera direction
+        if angle < 90:
+            continue
+        # draw polygon upside down with precalculated mean texture color
+        draw.polygon([(vert[x], max_y - vert[y]) for vert in face], fill=average_colors[ids[idx]])
+
+    # if render mode == "all" the image isn't saved but assigned to an axes
     if not ax:
         return img
     else:
