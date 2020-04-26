@@ -15,7 +15,7 @@ to generate radar images.
  
 These three files will now be explained more in detail.
  
- ### colored_radar_image.py
+ ### colored_radar_image.py (mode == 0)
  This file contains the most recent functionality.
  
  From a Q2BSP object it takes not only geometry information but also normal and texture information.
@@ -25,3 +25,53 @@ These three files will now be explained more in detail.
  After sorting all polygons by their depth / distance to camera, they are drawn:
  
  ![Image of colored 3D view](https://github.com/lennart-g/BSP-Hacking/blob/radar_image/imgs/pp1_3d.png)
+ 
+ Rendering from certain angles like this gives a good impression of both the layout and height information.
+ This image can be rendered using  `create_image(pball_path, "/maps/propaint1.bsp", "rotated", 0, "output.png", x_an=0.0, y_an=15.0, z_an=50.0)`
+
+ 
+ To display different perspectives on a single image, matplotlib is used:
+ 
+ ![Image of all views](https://github.com/lennart-g/BSP-Hacking/blob/radar_image/imgs/nhb_col.png)
+ 
+ Seeing a map from different angles allows spotting information that would have been hidden otherwise.
+ This image can be rendered using `create_image(pball_path, "/maps/nhb.bsp", "all", 0, "output.png")`
+ 
+ Supported view angles are
+ - "front"
+ - "right"
+ - "back"
+ - "left"
+ - "top"
+ - "bottom"
+ - "rotated"
+ 
+ The latter allows a custom camera angle and requires specifying the x, y, z angle.
+ 
+ ### heatmap_radar_image.py (mode == 1)
+ This mode renders all faces in a map semi-transparent. Instead of average texture colors, a heat-map like 
+ color scale is used to display height or depth for fixed angles (top, side, front view).
+ 
+ ![Image of heatmap 3D view](https://github.com/lennart-g/BSP-Hacking/blob/radar_image/imgs/apache_b2_hm_3d.png)
+ 
+ This mode is useful for displaying geometry that's hidden by outside walls.
+ The image above can be rendered using `create_image(pball_path, "/maps/beta/apache_b2.bsp", "rotated", 1, "output.png")`
+ 
+ For this mode it is also possible to draw different perspective on one image:
+ 
+ ![Image of all heatmap views](https://github.com/lennart-g/BSP-Hacking/blob/radar_image/imgs/wobluda_fix_hm.png)
+ 
+ Note how you can figure from the colors that the sewers way on the image above is one of the lowest parts of the map.
+ Code: `create_image(pball_path, "/maps/wobluda_fix.bsp", "all", 1, "output.png")`
+ 
+ For this and the following mode it is currently not possible to specify angles.
+ 
+ ### wireframe_radar_image.py (mode == 2)
+ This mode contains the least information but can in some cases still put emphasis on details that would otherwise have been missed.
+ In the example below, bmodels (red) outside of the map can easily be seen. These are used for target and trigger entities
+ and are not even rendered in-game.
+ 
+ ![Image of heatmap wireframe](https://github.com/lennart-g/BSP-Hacking/blob/radar_image/imgs/siegecastle_hmwf.png)
+ 
+ Code: `create_image(pball_path, "/maps/siegecastle.bsp", "all", 2, "output.png")`
+ 
