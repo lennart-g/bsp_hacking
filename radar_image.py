@@ -2,6 +2,7 @@ import wireframe_radar_image as wf
 import heatmap_radar_image as hm
 import colored_radar_image as cl
 
+
 def create_image(path_to_pball: str, map_path:str, image_type: str, mode: int, image_path: str, dpi: int= 1700, x_an: float = None, z_an: float = None) -> None:
     """
     root function for creating radar images
