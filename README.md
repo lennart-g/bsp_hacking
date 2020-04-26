@@ -12,11 +12,13 @@ To load a map, use `my_map = Q2BSP("path/to/map.bsp")`
 
 Example for getting the game mode of a map and changing the loading message:
      
-     game_mode = my_map.worldspawn["gamemode"]
-     print(game_mode)
-     my_map.worldspawn["message"] = "I edited this message!"
-     my_map.update_lump_sizes()
-     my_map.save_map("path/to/map.bsp", "_mod")  # The new map will be saved as map_mod.bsp
+ ```python
+game_mode = my_map.worldspawn["gamemode"]
+ print(game_mode)
+ my_map.worldspawn["message"] = "I edited this message!"
+ my_map.update_lump_sizes()
+ my_map.save_map("path/to/map.bsp", "_mod")  # The new map will be saved as map_mod.bsp
+```
 
 ## Radar Image Generator
 The original purpose of this project was automatically generating a top view shot of maps that gives all
