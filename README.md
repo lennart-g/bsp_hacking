@@ -13,7 +13,7 @@ To load a map, use `my_map = Q2BSP("path/to/map.bsp")`
 Example for getting the game mode of a map and changing the loading message:
      
  ```python
-game_mode = my_map.worldspawn["gamemode"]
+ game_mode = my_map.worldspawn["gamemode"]
  print(game_mode)
  my_map.worldspawn["message"] = "I edited this message!"
  my_map.update_lump_sizes()

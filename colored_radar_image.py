@@ -243,29 +243,26 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, title="") -> Opt
             polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1])
             polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2])
 
-    # extract normals, ids, polys from the Polygon list
-    # TODO: modify code so it doesnt need following extraction
-    normals = [x.normal for x in polys]
-    ids = [x.tex_id for x in polys]
-    polys = [x.vertices for x in polys]
-    # to flip y upside down because of image coordinate origin
-    max_y = round(max([p for i in [[vertex[y] for vertex in edge] for edge in polys] for p in i]))
+    max_x = round(max([a for b in [vert[x] for vert in [face.vertices for face in polys]] for a in b]))
+    max_y = round(max([a for b in [vert[y] for vert in [face.vertices for face in polys]] for a in b]))
+
     img = Image.new("RGBA",
-                    (round(max([p for i in [[vertex[x] for vertex in edge] for edge in polys] for p in i])),
-                     round(max([p for i in [[vertex[y] for vertex in edge] for edge in polys] for p in i]))),
+                    (max_x,
+                     max_y),
                     (255, 255, 255, 100))
     draw = ImageDraw.Draw(img, "RGBA")
 
+    # the view vector is the direction the camera is looking
     view_vector = [0, 0, 0]
     view_vector[z] = -1  # dynamic in case x y z values get changed again
     for idx, face in enumerate(polys):
-        angle = math.degrees(np.arccos(np.dot(view_vector, list(normals[idx])) / (
-                np.linalg.norm(view_vector) * np.linalg.norm(list(normals[idx])))))
+        angle = math.degrees(np.arccos(np.dot(view_vector, list(face.normal)) / (
+                np.linalg.norm(view_vector) * np.linalg.norm(list(face.normal)))))
         # only render faces facing in camera direction
         if angle < 90:
             continue
         # draw polygon upside down with precalculated mean texture color
-        draw.polygon([(vert[x], max_y - vert[y]) for vert in face], fill=average_colors[ids[idx]])
+        draw.polygon([(vert[x], max_y - vert[y]) for vert in face.vertices], fill=average_colors[face.tex_id])
 
     # if render mode == "all" the image isn't saved but assigned to an axes
     if not ax:
