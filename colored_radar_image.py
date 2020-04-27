@@ -37,47 +37,30 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     average_colors = list()
     for texture in texture_list_cleaned:
         color = (0, 0, 0)
+        # list of all files in stored subdirectory
         texture_options = os.listdir(pball_path+"/textures/"+"/".join(texture.lower().split("/")[:-1]))
-        # print(texture_options)
         texture_path = ""
+        # iterate through texture options until one name matches stored texture name
         for idx, tex_option in enumerate(texture_options):
-            # print(os.path.splitext(tex_option)[0], texture.split("/")[-1].lower())
-
             if texture.split("/")[-1].lower() == os.path.splitext(tex_option)[0]:
                 texture_path = "/".join(texture.lower().split("/")[:-1]) + "/" + tex_option
                 break
+
+        # texture was not found in specified subdirectory
         if not texture_path:
             print("Missing texture: ", texture)
             average_colors.append((0, 0, 0))
             continue
-        # if os.path.isfile(pball_path + "/textures/" + texture + ".png"):
-        #     img = Image.open((pball_path + "/textures/" + texture + ".png"))
+
         if os.path.splitext(texture_path)[1] in [".png", ".jpg", ".tga"]:
             img = Image.open(pball_path + "/textures/" + texture_path)
             img2 = img.resize((1, 1))
             img2 = img2.convert("RGBA")
             img2 = img2.load()
             color = img2[0, 0]
-            # color = img2.getpixel((0, 0))
 
-        elif os.path.isfile(pball_path + "/textures/" + texture + ".jpg"):
-            img = Image.open((pball_path + "/textures/" + texture + ".jpg"))
-            img2 = img.resize((1, 1))
-
-            img2 = img2.convert("RGBA")
-            img2 = img2.load()
-            color = img2[0, 0]
-
-        elif os.path.isfile(pball_path + "/textures/" + texture + ".tga"):
-            img = Image.open((pball_path + "/textures/" + texture + ".tga"))
-            img2 = img.resize((1, 1))
-
-            img2 = img2.convert("RGBA")
-            img2 = img2.load()
-            color = img2[0, 0]
-
-        # elif os.path.isfile(pball_path + "/textures/" + texture + ".wal"):
         elif os.path.splitext(texture_path)[1] == ".wal":
+            # wal files are 8 bit and require a palette
             with open("pb2e.pal", "r") as pal:
                 conts = (pal.read().split("\n")[3:])
                 conts = [b.split(" ") for b in conts]
@@ -87,12 +70,14 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
                 img3 = WalImageFile.open(pball_path + "/textures/" + texture_path)
                 img3.putpalette(conts)
                 img3 = img3.convert("RGBA")
-                # print("mode",img3.mode)
 
                 img2 = img3.resize((1, 1))
 
                 color = img2.getpixel((0, 0))
-        # print(f"texture: {texture} - color: {color} - type: {type(color)}")
+        else:
+            print(f"Error: unsupported format {os.path.splitext(texture_path)[1]} in {texture_path}"
+                  f"\nsupported formats are .png, .jpg, .tga, .wal")
+
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
             print(texture)
