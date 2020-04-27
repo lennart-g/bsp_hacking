@@ -54,8 +54,8 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             maxs = [max_x[0], max_y[1], max_z[2]]
             # TODO: IDE complains about unexpected type (index after ["rotated"]
             print(view_rotations["rotated"][0])
-            view_rotations["rotated"][2] = 90-math.degrees(np.arctan(maxs[0] / maxs[1]))
-            view_rotations["rotated"][1] = 90-math.degrees(np.arctan(maxs[0] / maxs[2]))
+            view_rotations["rotated"][2] = math.degrees(np.arctan(maxs[0] / maxs[1]))
+            view_rotations["rotated"][1] = math.degrees(np.arctan(maxs[0] / maxs[2]))
             view_rotations["rotated"][0] = 0.0
         if image_type == "all":
             # render images and assign to a matplotlib axes, then save whole plot

@@ -29,12 +29,14 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # instead of directly reading all information from file, the Q2BSP class is used for reading
     temp_map = Q2BSP(path)
 
+
     # get a list of unique texture names (which are stored without an extension -> multiple ones must be tested)
     texture_list = [x.get_texture_name() for x in temp_map.tex_infos]
     texture_list_cleaned = list(dict.fromkeys(texture_list))
-    print(texture_list_cleaned)
     # iterate through texture list, look which one exists, load, rescale to 1×1 pixel = color is mean color
     average_colors = list()
+    skip_faces = list()
+
     for texture in texture_list_cleaned:
         color = (0, 0, 0)
         # list of all files in stored subdirectory
@@ -81,6 +83,10 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
             print(texture)
+        # print(texture)
+        if True in [x in texture.lower() for x in ["origin", "clip", "skip", "hint", "trigger"]]:
+            print(texture)
+            color_rgb = (0,0,0,0)  # actually rgba
         average_colors.append(color_rgb)
 
     # instead of storing face color directly in the Polygon object, store an index so that you can easily change one
@@ -90,7 +96,11 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
     # each face is a list of vertices stored as Tuples
     faces: List[List[Tuple]] = list()
-    for face in temp_map.faces:
+    skip_surfaces = []
+    for idx, face in enumerate(temp_map.faces):
+        flags = temp_map.tex_infos[face.texture_info].flags
+        if flags.hint or flags.nodraw or flags.sky or flags.skip:
+            skip_surfaces.append(idx)
         current_face: List[Tuple] = list()
         for i in range(face.num_edges):
             face_edge = temp_map.face_edges[face.first_edge + i]
@@ -116,6 +126,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     normal_list = [x.normal for x in temp_map.planes]
     normals = list()
     for face in temp_map.faces:
+        # print(temp_map.tex_infos[face.texture_info].flags)
         if not face.plane_side == 0:
             # -1*0.0 returns -0.0 which is prevented by this expression
             # TODO: Does -0.0 do any harm here?
@@ -130,6 +141,16 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     for idx, poly in enumerate(polys_normalized):
         polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
         polygons.append(polygon)
+
+    print(skip_surfaces, "skip")
+    for i in skip_surfaces[::-1]:
+        polygons.pop(i)
+
+    # for idx, poly in enumerate(polygons):
+    #     print(average_colors[poly.tex_id])
+    #     if average_colors[poly.tex_id] == (0,0,0,0):
+    #         print("here")
+    #         polygons.pop(len(polygons)-1-idx)
 
     return polygons, average_colors
 
@@ -267,7 +288,8 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
         if angle < 90:
             continue
         # draw polygon upside down with precalculated mean texture color
-        draw.polygon([(vert[x], max_y - vert[y]) for vert in face.vertices], fill=average_colors[face.tex_id])
+        if not average_colors[face.tex_id] == (0,0,0,0):
+            draw.polygon([(vert[x], max_y - vert[y]) for vert in face.vertices], fill=average_colors[face.tex_id])
 
     # if render mode == "all" the image isn't saved but assigned to an axes
     if not ax:

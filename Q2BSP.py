@@ -60,6 +60,7 @@ class Q2BSP:
             (self.worldspawn, self.entities) = self.__get_entities()
             self.nodes = self.__get_bsp_nodes()
             self.planes = self.__get_planes()
+            self.brushes = self.__get_brushes()
 
     def __get_header(self):
         magic = self.__bytes1[0:4].decode("ascii", "ignore")
@@ -323,26 +324,47 @@ class Q2BSP:
             [self.u_offset] = struct.unpack('<f', tex_info_bytes[12:16])
             self.v_axis = struct.unpack('<fff', tex_info_bytes[16:28])
             [self.v_offset] = struct.unpack('<f', tex_info_bytes[28:32])
-            self.flags = int.from_bytes(tex_info_bytes[32:36], byteorder="little", signed=False)
-            self.flags = 0
-            self.contents = 1
+            self.__int_flags = int.from_bytes(tex_info_bytes[32:36], byteorder="little", signed=False)
+            self.flags = self.__SurfaceFlags(*[bool(self.__int_flags & (1 << n)) for n in range(10)])
             self.value = int.from_bytes(tex_info_bytes[36:40], byteorder="little", signed=False)
             self.__texture_name = tex_info_bytes[40:72]
             self.next_texinfo = int.from_bytes(tex_info_bytes[72:76], byteorder="little", signed=False)
 
+        @dataclass
+        class __SurfaceFlags:
+            light: bool
+            slick: bool
+            sky: bool
+            warp: bool
+            trans33: bool
+            trans66: bool
+            flowing: bool
+            nodraw: bool
+            hint: bool
+            skip: bool
+
+            def __iter__(self):
+                return iter(astuple(self))
+
+        def list_flags(self):
+            flags = self.__int_flags
+            if not flags == 0 and not flags == 2147483648:  # not 0 or negative 0 (sign bit set to 1)
+                flag_list = list()
+                for l in range(32):  # size of surface flag part
+                    if not flags&2 ** l == 0:  # flag 2**l is in flag sum
+                        flag_list.append(2**l)
+                    if 2**l > flags:  # cannot be in flag sum anyway
+                        break
+                print(f"flags: {flag_list} on texture {self.__texture_name} with sum {flags}")
+
         def tex_to_bytes(self):
             tex_bytes = b""
-            for x in self.u_axis:
-                tex_bytes += bytearray(struct.pack("<f", x))
-                # tex_bytes+=x.to_bytes(4, byteorder="little")
-            # tex_bytes+= self.u_offset.to_bytes(4, byteorder="little")
-            tex_bytes += bytearray(struct.pack("<f", self.u_offset))
-            for x in self.v_axis:
-                tex_bytes += bytearray(struct.pack("<f", x))
-                # tex_bytes+=x.to_bytes(4, byteorder="little")
-            tex_bytes += bytearray(struct.pack("<f", self.v_offset))
-            # tex_bytes+= self.v_offset.to_bytes(4, byteorder="little")
-            tex_bytes += self.flags.to_bytes(4, byteorder="little")
+            tex_bytes += struct.pack("<fff", *self.u_axis)
+            tex_bytes += struct.pack("<f", self.u_offset)
+            tex_bytes += struct.pack("<fff", *self.v_axis)
+            tex_bytes += struct.pack("<f", self.v_offset)
+            flag_sum = sum([2**idx for (idx, flag) in enumerate(self.flags) if flag])
+            tex_bytes += flag_sum.to_bytes(4, byteorder="little", signed=False)
             tex_bytes += self.value.to_bytes(4, byteorder="little")
             tex_bytes += self.__texture_name
             tex_bytes += self.next_texinfo.to_bytes(4, byteorder="little")
@@ -491,7 +513,9 @@ class Q2BSP:
 
     def __get_entities(self):
         entities = list()
-        raw_entity_lines = self.binary_lumps[0].decode("ascii")
+        # print(chr(*struct.unpack("<I", b"0x88")))
+        raw_entity_lines = bytearray(self.binary_lumps[0]).decode("ISO-8859-1")
+        # print(raw_entity_lines)
         entity_lines = raw_entity_lines.rstrip("\x00")
         # print(entity_lines.split("\n"))
         current_entity = {}
@@ -538,8 +562,9 @@ class Q2BSP:
             entity_lines.append("}")
         # print(entity_lines)
         entity_lines = "\n".join(entity_lines)+"\n\x00"
-        entity_bytes = entity_lines.encode("ascii")
+        entity_bytes = entity_lines.encode("ISO 8859-1")
         self.binary_lumps[0] = entity_bytes
+
     class Model:
         def __init__(self, model_bytes):
             self.__model_bytes = model_bytes
@@ -594,14 +619,55 @@ class Q2BSP:
             new_bytes += models[i].save_to_bytes()
         self.binary_lumps[13] = new_bytes
 
-    def save_brushes_temp(self, brush_bytes):
-        num_bytes = int(len(brush_bytes) / 12)
-        # print(f"size: {len(brush_bytes)} - divided: {len(brush_bytes) / 12}")
+    class Brush:
+        def __init__(self, model_bytes: bytes):
+            self.first_brush_side, self.num_brush_sides, self.__int_flags = struct.unpack("<III", model_bytes[:12])
+            visible_flags = [bool(self.__int_flags & (1 << n)) for n in range(7)]
+            non_visible_flags = [bool(self.__int_flags & (1 << n)) for n in range(15,30)]
+            self.contents = self.__ContentFlags(*visible_flags, *non_visible_flags)
+            # print(f"flags {self.__int_flags} with ladder {2**21}")
+
+        @dataclass
+        class __ContentFlags:
+            solid: bool
+            window: bool
+            aux: bool
+            lava: bool
+            slime: bool
+            water: bool
+            mist: bool
+            area_portal: bool
+            player_clip: bool
+            monster_clip: bool
+            current_0: bool
+            current_90: bool
+            current_180: bool
+            current_270: bool
+            current_up: bool
+            current_down: bool
+            origin: bool
+            monster: bool
+            dead_monster: bool
+            detail: bool
+            translucent: bool
+            ladder: bool
+
+            def __iter__(self):
+                return iter(astuple(self))
+
+    def __get_brushes(self):
+        n_brushes = int(len(self.binary_lumps[14])/12)
+        brush_list = list()
+        for i in range(n_brushes):
+            brush_list.append(self.Brush(self.binary_lumps[14][12*i:12*i+12]))
+        return brush_list
+
+    def save_brushes(self, brushes):
         new_bytes = b""
-        for i in range(num_bytes):
-            new_bytes += brush_bytes[12 * i:12 * i + 8]
-            new_bytes += (1).to_bytes(4, byteorder="little", signed=False)
-        # print(f"new: {len(new_bytes)}")
+        for brush in brushes:
+            flag_sum = sum([2**idx for (idx, flag) in zip(list(range(7))+list(range(15,30)),brush.contents) if flag])
+            new_bytes += struct.pack("<III", brush.first_brush_side, brush.num_brush_sides, flag_sum)
+
         self.binary_lumps[14] = new_bytes
 
     def __get_vertices_of_faces(self):
@@ -656,7 +722,7 @@ class Q2BSP:
         self.save_bsp_leaves(self.bsp_leaves)
         self.save_models(self.models)
         self.save_leaf_faces(self.leaf_faces)
-        self.save_brushes_temp(self.binary_lumps[14])
+        self.save_brushes(self.brushes)
         self.save_faces(self.faces)
         self.save_entities(self.worldspawn, self.entities)
         self.save_planes(self.planes)
