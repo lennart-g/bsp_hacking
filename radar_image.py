@@ -4,6 +4,7 @@ import colored_radar_image as cl
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+import math
 
 def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, image_path: str, dpi: int = 1700,
                  x_an: float = None, y_an: float = None, z_an: float = None, max_resolution: int = 2048) -> None:
@@ -52,8 +53,9 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             max_z = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[2])
             maxs = [max_x[0], max_y[1], max_z[2]]
             # TODO: IDE complains about unexpected type (index after ["rotated"]
-            view_rotations["rotated"][2] = cl.math.degrees(np.arctan(maxs[0] / maxs[1]))
-            view_rotations["rotated"][1] = cl.math.degrees(np.arctan(maxs[0] / maxs[2]))
+            print(view_rotations["rotated"][0])
+            view_rotations["rotated"][2] = 90-math.degrees(np.arctan(maxs[0] / maxs[1]))
+            view_rotations["rotated"][1] = 90-math.degrees(np.arctan(maxs[0] / maxs[2]))
             view_rotations["rotated"][0] = 0.0
         if image_type == "all":
             # render images and assign to a matplotlib axes, then save whole plot
@@ -82,7 +84,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             img.save(image_path)
     elif mode == 1:  # heatmap solid
         polys, texture_ids, mean_colors = hm.get_polys(path_to_pball + map_path, path_to_pball)
-        poly_rot = hm.get_rot_polys(polys, 10, 0, 70) # fixed value rotation
+        poly_rot = hm.get_rot_polys(polys, 90, 0, 0) # fixed value rotation
         polys = hm.sort_by_z(polys)
         if image_type == "all":
             fig_solid, ((s_ax1, s_ax2), (s_ax3, s_ax4)) = hm.plt.subplots(nrows=2, ncols=2)
