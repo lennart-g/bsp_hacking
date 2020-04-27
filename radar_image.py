@@ -3,9 +3,10 @@ import heatmap_radar_image as hm
 import colored_radar_image as cl
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
 def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, image_path: str, dpi: int = 1700,
-                 x_an: float = None, y_an: float = None, z_an: float = None) -> None:
+                 x_an: float = None, y_an: float = None, z_an: float = None, max_resolution: int = 2048) -> None:
     """
     root function for creating radar images
     :param mode: 0: colored solid, 1: heatmap solid, 2: heatmap wireframe
@@ -60,21 +61,25 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             fig_solid.suptitle(map_path.replace(".bsp", "").split("/")[len(map_path.split("/")) - 1] + " solid")
 
             poly_list = cl.get_rot_polys(polys, *view_rotations["front"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax1, mean_colors, title="front view")
+            cl.create_poly_image(poly_list, s_ax1, mean_colors, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["top"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax2, mean_colors, title="top view")
+            cl.create_poly_image(poly_list, s_ax2, mean_colors, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["right"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax3, mean_colors, title="side view")
+            cl.create_poly_image(poly_list, s_ax3, mean_colors, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["rotated"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax4, mean_colors, title="rotated view \n (orthographic)")
-
+            cl.create_poly_image(poly_list, s_ax4, mean_colors, max_resolution)
+            s_ax1.set_title("front view")
+            s_ax2.set_title("top view")
+            s_ax3.set_title("side view")
+            s_ax4.set_title("rotated view \n (orthographic)")
             fig_solid.show()
             fig_solid.savefig(image_path, dpi=dpi)
         else:
             # rotate polys and draw
             poly_rot = cl.get_rot_polys(polys, *view_rotations[image_type])
-            cl.create_poly_image(poly_rot, None, mean_colors).save(image_path)
-
+            img = cl.create_poly_image(poly_rot, None, mean_colors, max_resolution)
+            # img.thumbnail((512, 512), Image.ANTIALIAS)
+            img.save(image_path)
     elif mode == 1:  # heatmap solid
         polys, texture_ids, mean_colors = hm.get_polys(path_to_pball + map_path, path_to_pball)
         poly_rot = hm.get_rot_polys(polys, 10, 0, 70) # fixed value rotation

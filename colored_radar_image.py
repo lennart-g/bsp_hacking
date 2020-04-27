@@ -216,7 +216,7 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
     return faces
 
 
-def create_poly_image(polys: List[Polygon], ax, average_colors, title="") -> Optional[
+def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: int = 2048) -> Optional[
     Image.Image]:
     """
     Draws radar image and assigns it to axes or returns it
@@ -237,14 +237,18 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, title="") -> Opt
     # sorted descending because the bigger the x value the further away the polygon is from camera
     polys = sort_by_axis(polys, z)
     # round vertices so they are integers and match pixel positions
+
+    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+
     for idx1, face in enumerate(polys):
         for idx2, vert in enumerate(face.vertices):
-            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0])
-            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1])
-            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2])
+            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
+            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
+            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
 
-    max_x = round(max([a for b in [vert[x] for vert in [face.vertices for face in polys]] for a in b]))
-    max_y = round(max([a for b in [vert[y] for vert in [face.vertices for face in polys]] for a in b]))
+    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
 
     img = Image.new("RGBA",
                     (max_x,
@@ -270,4 +274,3 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, title="") -> Opt
     else:
         ax.axis("off")
         ax.imshow(img)
-        ax.set_title(title)
