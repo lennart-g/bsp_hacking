@@ -82,10 +82,10 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
-            print(texture)
+            print("Black texture:",texture)
         # print(texture)
         if True in [x in texture.lower() for x in ["origin", "clip", "skip", "hint", "trigger"]]:
-            print(texture)
+            print("Invisible surface:",texture)
             color_rgb = (0,0,0,0)  # actually rgba
         average_colors.append(color_rgb)
 
@@ -146,19 +146,43 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     return polygons, average_colors
 
 
-def centralize_faces(faces) -> List[Polygon]:
+def delta_min_max(faces: List[Polygon], x: int=0, y: int=1, z: int=2) -> Tuple[float, float, float]:
+    """
+    calculates difference between min and max value for x y and z
+    :param faces: list of polygon objects
+    :param x: optional - index of x coordinate (different on image)
+    :param y: optional - index of x coordinate (different on image)
+    :param z: optional - index of x coordinate (different on image)
+    :return: three floats showing the difference
+    """
+    min_x = min([a for b in [[vert[x] for vert in face.vertices] for face in faces] for a in b])
+    min_y = min([a for b in [[vert[y] for vert in face.vertices] for face in faces] for a in b])
+    min_z = min([a for b in [[vert[z] for vert in face.vertices] for face in faces] for a in b])
+    max_x = max([a for b in [[vert[x] for vert in face.vertices] for face in faces] for a in b])
+    max_y = max([a for b in [[vert[y] for vert in face.vertices] for face in faces] for a in b])
+    max_z = max([a for b in [[vert[z] for vert in face.vertices] for face in faces] for a in b])
+    return max_x-min_x, max_y-min_y, max_z-min_z
+
+
+def centralize_faces(faces: List[Polygon]) -> List[Polygon]:
+    """
+    shifts coordinates so min = -max for x y and z
+    :param faces: list of polygon objects
+    :return: list of polygon objects
+    """
     polygons = copy.deepcopy(faces)
-    # moves all polys so that all coordinate values >= 0
+
     min_x = min([a for b in [[vert[0] for vert in face.vertices] for face in polygons] for a in b])
     min_y = min([a for b in [[vert[1] for vert in face.vertices] for face in polygons] for a in b])
     min_z = min([a for b in [[vert[2] for vert in face.vertices] for face in polygons] for a in b])
-    print(min_x, min_y, min_z)
+    (size_x, size_y, size_z) = delta_min_max(faces)
 
+    # moves all polys so that all coordinate values >= 0 and then moves so that (min+max)/2 = 0
     for idx1, face in enumerate(polygons):
         for idx2, vert in enumerate(face.vertices):
-            polygons[idx1].vertices[idx2][0] = polygons[idx1].vertices[idx2][0] - min_x
-            polygons[idx1].vertices[idx2][1] = polygons[idx1].vertices[idx2][1] - min_y
-            polygons[idx1].vertices[idx2][2] = polygons[idx1].vertices[idx2][2] - min_z
+            polygons[idx1].vertices[idx2][0] = polygons[idx1].vertices[idx2][0] - min_x - size_x / 2
+            polygons[idx1].vertices[idx2][1] = polygons[idx1].vertices[idx2][1] - min_y - size_y / 2
+            polygons[idx1].vertices[idx2][2] = polygons[idx1].vertices[idx2][2] - min_z - size_z / 2
     return polygons
 
 
@@ -259,21 +283,25 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
     polys = sort_by_axis(polys, z)
     # round vertices so they are integers and match pixel positions
 
-    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    size_x, size_y = delta_min_max(polys, x, y, z)[:2]
+    print(size_x, size_y, "sizes")
 
+    # normalizes coordinates to be in range of +- width/2 and +- height/2
     for idx1, face in enumerate(polys):
         for idx2, vert in enumerate(face.vertices):
-            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
-            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
-            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
+            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(size_x, size_y) * max_resolution)
+            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(size_x, size_y) * max_resolution)
+            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(size_x, size_y) * max_resolution)
 
-    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    size_x, size_y = delta_min_max(polys, x, y, z)[:2]
+    print(size_x, size_y, "sizes")
+
+    min_x = round(min([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
 
     img = Image.new("RGBA",
-                    (max_x,
-                     max_y),
+                    (round(size_x),
+                     round(size_y)),
                     (255, 255, 255, 100))
     draw = ImageDraw.Draw(img, "RGBA")
 
@@ -287,8 +315,9 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
         if angle < 90:
             continue
         # draw polygon upside down with precalculated mean texture color
-        if not average_colors[face.tex_id] == (0,0,0,0):
-            draw.polygon([(vert[x], max_y - vert[y]) for vert in face.vertices], fill=average_colors[face.tex_id])
+        if average_colors[face.tex_id] == (0,0,0,0):
+            continue
+        draw.polygon([(vert[x]-min_x, max_y - vert[y]) for vert in face.vertices], fill=average_colors[face.tex_id])
 
     # if render mode == "all" the image isn't saved but assigned to an axes
     if not ax:
