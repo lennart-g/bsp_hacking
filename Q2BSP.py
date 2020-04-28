@@ -150,7 +150,7 @@ class Q2BSP:
         vert_list = list()
         n_verts = int(self.lump_sizes[2].length / 12)
         for i in range(n_verts):
-            vert_list.append(struct.unpack("<fff", self.binary_lumps[2][12 * i:12 * (i + 1)]))
+            vert_list.append(list(struct.unpack("<fff", self.binary_lumps[2][12 * i:12 * (i + 1)])))
         return vert_list
 
     class BSPNode:

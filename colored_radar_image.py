@@ -95,13 +95,13 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     tex_ids = [texture_list_cleaned.index(texture_list[tex_index]) for tex_index in tex_indices]
 
     # each face is a list of vertices stored as Tuples
-    faces: List[List[Tuple]] = list()
+    faces: List[List[List]] = list()
     skip_surfaces = []
     for idx, face in enumerate(temp_map.faces):
         flags = temp_map.tex_infos[face.texture_info].flags
         if flags.hint or flags.nodraw or flags.sky or flags.skip:
             skip_surfaces.append(idx)
-        current_face: List[Tuple] = list()
+        current_face: List[List] = list()
         for i in range(face.num_edges):
             face_edge = temp_map.face_edges[face.first_edge + i]
             if face_edge > 0:
@@ -113,14 +113,6 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
                     current_face.append(temp_map.vertices[vert])
         faces.append(current_face)
 
-    # get minimal of all x y and z values and move all vertices so they all have coordinate values >= 0
-    min_x = min([a[0] for b in faces for a in b])
-    min_y = min([a[1] for b in faces for a in b])
-    min_z = min([a[2] for b in faces for a in b])
-
-    polys_normalized = [[[vertex[0] - min_x,
-                          vertex[1] - min_y,
-                          vertex[2] - min_z] for vertex in edge] for edge in faces]
 
     # get normals out of the Q2BSP object, if face.plane_side != 0, flip it (invert signs of coordinates)
     normal_list = [x.normal for x in temp_map.planes]
@@ -135,24 +127,39 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
             normal = list(normal_list[face.plane])
         normals.append(normal)
 
+    # TODO: Why does this have a critical effect?
+    faces = [[[vertex[0], vertex[1], vertex[2]] for vertex in edge] for edge in faces]
+
     # construct polygon list out of the faces, indices into unique textures aka colors (two different textures could
     # have the same mean color), normals
     polygons: List[Polygon] = list()
-    for idx, poly in enumerate(polys_normalized):
+    for idx, poly in enumerate(faces):
         polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
         polygons.append(polygon)
+
+    polygons = centralize_faces(polygons)
 
     print(skip_surfaces, "skip")
     for i in skip_surfaces[::-1]:
         polygons.pop(i)
 
-    # for idx, poly in enumerate(polygons):
-    #     print(average_colors[poly.tex_id])
-    #     if average_colors[poly.tex_id] == (0,0,0,0):
-    #         print("here")
-    #         polygons.pop(len(polygons)-1-idx)
-
     return polygons, average_colors
+
+
+def centralize_faces(faces) -> List[Polygon]:
+    polygons = copy.deepcopy(faces)
+    # moves all polys so that all coordinate values >= 0
+    min_x = min([a for b in [[vert[0] for vert in face.vertices] for face in polygons] for a in b])
+    min_y = min([a for b in [[vert[1] for vert in face.vertices] for face in polygons] for a in b])
+    min_z = min([a for b in [[vert[2] for vert in face.vertices] for face in polygons] for a in b])
+    print(min_x, min_y, min_z)
+
+    for idx1, face in enumerate(polygons):
+        for idx2, vert in enumerate(face.vertices):
+            polygons[idx1].vertices[idx2][0] = polygons[idx1].vertices[idx2][0] - min_x
+            polygons[idx1].vertices[idx2][1] = polygons[idx1].vertices[idx2][1] - min_y
+            polygons[idx1].vertices[idx2][2] = polygons[idx1].vertices[idx2][2] - min_z
+    return polygons
 
 
 def sort_by_axis(faces: List[Polygon], axis: int) -> List[Polygon]:
@@ -225,16 +232,7 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
             faces[idx0].normal.z = math.sin(math.radians(x_angle)) * old_normal_y + math.cos(
                 math.radians(x_angle)) * old_normal_z
 
-    # moves all polys so that all coordinate values >= 0
-    min_x = min([a for b in [[vert[0] for vert in face.vertices] for face in faces] for a in b])
-    min_y = min([a for b in [[vert[1] for vert in face.vertices] for face in faces] for a in b])
-    min_z = min([a for b in [[vert[2] for vert in face.vertices] for face in faces] for a in b])
-
-    for idx1, face in enumerate(faces):
-        for idx2, vert in enumerate(face.vertices):
-            faces[idx1].vertices[idx2][0] = vert[0] - min_x
-            faces[idx1].vertices[idx2][1] = vert[1] - min_y
-            faces[idx1].vertices[idx2][2] = vert[2] - min_z
+    faces = centralize_faces(faces)
 
     return faces
 
