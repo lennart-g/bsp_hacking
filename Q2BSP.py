@@ -542,6 +542,8 @@ class Q2BSP:
             if line.strip():
                 key_value = re.findall('"([^"]*)"', line)
                 # print(idx, line, key_value)
+                if key_value[0] in current_entity.keys():
+                    print("Entity Error: multiple values for one key", key_value)
                 current_entity[key_value[0]] = key_value[1]
                 if not len(key_value):
                     print("Entity Error:",key_value)
