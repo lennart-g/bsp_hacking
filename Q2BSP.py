@@ -61,6 +61,8 @@ class Q2BSP:
             self.nodes = self.__get_bsp_nodes()
             self.planes = self.__get_planes()
             self.brushes = self.__get_brushes()
+            self.is_vised = not len(self.binary_lumps[3]) == 0
+            self.is_lit = not len(self.binary_lumps[7]) == 0
 
     def __get_header(self):
         magic = self.__bytes1[0:4].decode("ascii", "ignore")
