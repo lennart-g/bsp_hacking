@@ -8,6 +8,7 @@ from dataclasses import dataclass, astuple
 from typing import Tuple, List, Dict, NamedTuple
 from collections import Iterable
 
+
 @dataclass
 class point3f:
     x: float
@@ -35,6 +36,7 @@ def flatten(lis):
                 yield x
         else:
             yield item
+
 
 class Q2BSP:
     def __init__(self, map_path):
@@ -102,7 +104,7 @@ class Q2BSP:
                       "Area Portals"]
         for i in range(19):
             (offset, length) = struct.unpack("<II", self.__bytes1[8 + 8 * i:16 + 8 * i])
-            lump_size = self.LumpSizeInfo(offset, length, offset+length, lump_names[i])
+            lump_size = self.LumpSizeInfo(offset, length, offset + length, lump_names[i])
             lump_list.append(lump_size)
 
         # for getting lump order
@@ -128,11 +130,11 @@ class Q2BSP:
             return iter(astuple(self))
 
     def __get_planes(self):
-        num_planes = int(self.lump_sizes[1].length/20)
+        num_planes = int(self.lump_sizes[1].length / 20)
         plane_list = list()
         for i in range(num_planes):
-            normal = point3f(*struct.unpack("<fff", self.binary_lumps[1][20*i:20*i+12]))
-            (distance, plane_type) = struct.unpack("<fI", self.binary_lumps[1][20*i+12:20*i+20])
+            normal = point3f(*struct.unpack("<fff", self.binary_lumps[1][20 * i:20 * i + 12]))
+            (distance, plane_type) = struct.unpack("<fI", self.binary_lumps[1][20 * i + 12:20 * i + 20])
             plane_list.append(self.Plane(normal, distance, plane_type))
         return plane_list
 
@@ -294,18 +296,14 @@ class Q2BSP:
         return n_clusters, clusters
 
     def save_vis(self, clusters):
-        old_vis = self.binary_lumps[3]
         vis_bytes = b""
-        # print(self.n_clusters)
-        # print(f"--{len(clusters)}")
-        if not len(clusters) == 0:
+        if not len(clusters) == 0:  # for unvised maps, dont write anything into the vis lump
             vis_bytes += len(clusters).to_bytes(4, byteorder="little")
             pvs_offsets_counter = 4 + 8 * len(clusters)
             pvs_offsets = list()
             phs_offsets_counter = 4 + 8 * len(clusters)
             for i in range(len(clusters)):
                 phs_offsets_counter += len(self.clusters[i].compressed_pvs)
-            initial_phs_offset = phs_offsets_counter
             phs_offsets = list()
             for i in range(len(clusters)):
                 pvs_offsets.append(pvs_offsets_counter)
@@ -316,11 +314,9 @@ class Q2BSP:
                 vis_bytes += pvs_offsets[i].to_bytes(4, byteorder="little")
                 vis_bytes += phs_offsets[i].to_bytes(4, byteorder="little")
             for i in range(len(clusters)):
-                # print(f"offset: {pvs_offsets[i]} - current: {len(vis_bytes)}")
                 vis_bytes += self.clusters[i].compressed_pvs
             for i in range(len(clusters)):
                 vis_bytes += self.clusters[i].compressed_phs
-            # print(f"initial phs: {initial_phs_offset} - last pvs: {pvs_offsets_counter}")
 
         self.binary_lumps[3] = vis_bytes
 
@@ -357,9 +353,9 @@ class Q2BSP:
             if not flags == 0 and not flags == 2147483648:  # not 0 or negative 0 (sign bit set to 1)
                 flag_list = list()
                 for l in range(32):  # size of surface flag part
-                    if not flags&2 ** l == 0:  # flag 2**l is in flag sum
-                        flag_list.append(2**l)
-                    if 2**l > flags:  # cannot be in flag sum anyway
+                    if not flags & 2 ** l == 0:  # flag 2**l is in flag sum
+                        flag_list.append(2 ** l)
+                    if 2 ** l > flags:  # cannot be in flag sum anyway
                         break
                 print(f"flags: {flag_list} on texture {self.__texture_name} with sum {flags}")
 
@@ -369,7 +365,7 @@ class Q2BSP:
             tex_bytes += struct.pack("<f", self.u_offset)
             tex_bytes += struct.pack("<fff", *self.v_axis)
             tex_bytes += struct.pack("<f", self.v_offset)
-            flag_sum = sum([2**idx for (idx, flag) in enumerate(self.flags) if flag])
+            flag_sum = sum([2 ** idx for (idx, flag) in enumerate(self.flags) if flag])
             tex_bytes += flag_sum.to_bytes(4, byteorder="little", signed=False)
             tex_bytes += self.value.to_bytes(4, byteorder="little")
             tex_bytes += self.__texture_name
@@ -496,7 +492,7 @@ class Q2BSP:
 
     def save_leaf_faces(self, leaf_face_bytes):
         # print(
-            # f"len: {len(leaf_face_bytes)} > before leaf faces: \n{leaf_face_bytes} \nlen: {len(self.leaf_faces)} (maybe) after: \n {self.leaf_faces} \n equal: {leaf_face_bytes == self.leaf_faces}")
+        # f"len: {len(leaf_face_bytes)} > before leaf faces: \n{leaf_face_bytes} \nlen: {len(self.leaf_faces)} (maybe) after: \n {self.leaf_faces} \n equal: {leaf_face_bytes == self.leaf_faces}")
         new_bytes = b""
         for i in leaf_face_bytes:
             new_bytes += i.to_bytes(2, byteorder="little")
@@ -530,38 +526,59 @@ class Q2BSP:
         # entity_lines = [x.lstrip() for x in entity_lines if x.lstrip]
         # for idx,line in enumerate(entity_lines):
         #     print(idx,line)
-        for idx,line in enumerate(entity_lines):
+        for idx, line in enumerate(entity_lines):
             # print(line)
             if line.endswith("}"):
                 entities.append(current_entity)
-                current_entity={}
+                current_entity = {}
                 continue
             if line == "{":
                 continue
             if line.startswith("{"):
-                line=line.replace("{", "")
+                line = line.replace("{", "")
 
             if line.strip():
                 key_value = re.findall('"([^"]*)"', line)
                 # print(idx, line, key_value)
                 if key_value[0] in current_entity.keys():
                     print("Entity Error: multiple values for one key", key_value)
-                current_entity[key_value[0]] = key_value[1]
+                if not key_value[0] in current_entity.keys():
+                    current_entity[key_value[0]] = key_value[1]
                 if not len(key_value):
-                    print("Entity Error:",key_value)
+                    print("Entity Error:", key_value)
         # print("old entitity length", len(raw_entity_lines))
         worldspawn = {}
-        for idx,entity in enumerate(entities):
+        for idx, entity in enumerate(entities):
             if entity["classname"] == "worldspawn":
                 worldspawn = entity
                 entities.pop(idx)
                 break
+
+        if worldspawn["message"]:
+            if not all(128 > ord(c) > 31 for c in worldspawn["message"]):
+                new_message = []
+                last_char = False
+                for char in worldspawn["message"]:
+                    if 128 > ord(char) > 31:
+                        if last_char:
+                            new_message[-1] += char
+                        else:
+                            new_message.append(char)
+                        last_char = True
+                    else:
+                        new_message.append(*struct.unpack("<B", char.encode("cp1252")))
+                        last_char = False
+                print(new_message)
+                worldspawn["message"] = new_message
+
         return worldspawn, entities
 
     def save_entities(self, worldspawn, entities):
         entity_lines = ["{"]
         for key, value in worldspawn.items():
-            # print(key, value)
+            if key == "message" and not type(value) == str:
+                value = list(range(16,32))
+                value = "".join([x if type(x)==str else struct.pack("<B", x).decode("cp1252") for x in value])
             entity_lines.append(f'"{key}" "{value}"')
         entity_lines.append("}")
         for entity in entities:
@@ -570,7 +587,7 @@ class Q2BSP:
                 entity_lines.append(f'"{key}" "{value}"')
             entity_lines.append("}")
         # print(entity_lines)
-        entity_lines = "\n".join(entity_lines)+"\n\x00"
+        entity_lines = "\n".join(entity_lines) + "\n\x00"
         entity_bytes = entity_lines.encode("cp1252")
         self.binary_lumps[0] = entity_bytes
 
@@ -632,7 +649,7 @@ class Q2BSP:
         def __init__(self, model_bytes: bytes):
             self.first_brush_side, self.num_brush_sides, self.__int_flags = struct.unpack("<III", model_bytes[:12])
             visible_flags = [bool(self.__int_flags & (1 << n)) for n in range(7)]
-            non_visible_flags = [bool(self.__int_flags & (1 << n)) for n in range(15,30)]
+            non_visible_flags = [bool(self.__int_flags & (1 << n)) for n in range(15, 30)]
             self.contents = self.__ContentFlags(*visible_flags, *non_visible_flags)
             # print(f"flags {self.__int_flags} with ladder {2**21}")
 
@@ -665,16 +682,17 @@ class Q2BSP:
                 return iter(astuple(self))
 
     def __get_brushes(self):
-        n_brushes = int(len(self.binary_lumps[14])/12)
+        n_brushes = int(len(self.binary_lumps[14]) / 12)
         brush_list = list()
         for i in range(n_brushes):
-            brush_list.append(self.Brush(self.binary_lumps[14][12*i:12*i+12]))
+            brush_list.append(self.Brush(self.binary_lumps[14][12 * i:12 * i + 12]))
         return brush_list
 
     def save_brushes(self, brushes):
         new_bytes = b""
         for brush in brushes:
-            flag_sum = sum([2**idx for (idx, flag) in zip(list(range(7))+list(range(15,30)),brush.contents) if flag])
+            flag_sum = sum(
+                [2 ** idx for (idx, flag) in zip(list(range(7)) + list(range(15, 30)), brush.contents) if flag])
             new_bytes += struct.pack("<III", brush.first_brush_side, brush.num_brush_sides, flag_sum)
 
         self.binary_lumps[14] = new_bytes
