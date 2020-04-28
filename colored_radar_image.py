@@ -185,12 +185,12 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
             # rotate each vertex
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
-                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][0] = math.cos(math.radians(z_angle)) * old_x - math.sin(
                     math.radians(z_angle)) * old_y
                 faces[idx0].vertices[idx1][1] = math.sin(math.radians(z_angle)) * old_x + math.cos(
                     math.radians(z_angle)) * old_y
             # rotate normals once per face
+            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.x = math.cos(math.radians(z_angle)) * old_normal_x - math.sin(
                 math.radians(z_angle)) * old_normal_y
             faces[idx0].normal.y = math.sin(math.radians(z_angle)) * old_normal_x + math.cos(
@@ -200,11 +200,12 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
         for idx0, face in enumerate(faces):
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
-                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][0] = math.cos(math.radians(y_angle)) * old_x + math.sin(
                     math.radians(y_angle)) * old_z
                 faces[idx0].vertices[idx1][2] = -math.sin(math.radians(y_angle)) * old_x + math.cos(
                     math.radians(y_angle)) * old_z
+
+            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.x = math.cos(math.radians(y_angle)) * old_normal_x + math.sin(
                 math.radians(y_angle)) * old_normal_z
             faces[idx0].normal.z = -math.sin(math.radians(y_angle)) * old_normal_x + math.cos(
@@ -214,11 +215,11 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
         for idx0, face in enumerate(faces):
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
-                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][1] = math.cos(math.radians(x_angle)) * old_y - math.sin(
                     math.radians(x_angle)) * old_z
                 faces[idx0].vertices[idx1][2] = math.sin(math.radians(x_angle)) * old_y + math.cos(
                     math.radians(x_angle)) * old_z
+            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.y = math.cos(math.radians(x_angle)) * old_normal_y - math.sin(
                 math.radians(x_angle)) * old_normal_z
             faces[idx0].normal.z = math.sin(math.radians(x_angle)) * old_normal_y + math.cos(
@@ -248,9 +249,9 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
     :param x: coordinate that will be drawn as x value
     :param y: coordinate that will be drawn as y value
     :param title: only relevant when image is drawn on axes
-    :param ids: 
-    :param average_colors: 
-    :return: 
+    :param ids:
+    :param average_colors:
+    :return:
     """
     # y value will be the images x value and (max z value - z) will be images y value
     x = 1
