@@ -74,6 +74,9 @@ class Q2BSP:
         lump_end: int
         lump: str
 
+        def __iter__(self):
+            return iter(astuple(self))
+
     def __get_lump_sizes(self) -> Tuple[List[LumpSizeInfo], List[int]]:
         lump_list = list()
         lump_names = ["Entities",
@@ -293,28 +296,29 @@ class Q2BSP:
         vis_bytes = b""
         # print(self.n_clusters)
         # print(f"--{len(clusters)}")
-        vis_bytes += len(clusters).to_bytes(4, byteorder="little")
-        pvs_offsets_counter = 4 + 8 * len(clusters)
-        pvs_offsets = list()
-        phs_offsets_counter = 4 + 8 * len(clusters)
-        for i in range(len(clusters)):
-            phs_offsets_counter += len(self.clusters[i].compressed_pvs)
-        initial_phs_offset = phs_offsets_counter
-        phs_offsets = list()
-        for i in range(len(clusters)):
-            pvs_offsets.append(pvs_offsets_counter)
-            pvs_offsets_counter += len(self.clusters[i].compressed_pvs)
-            phs_offsets.append(phs_offsets_counter)
-            phs_offsets_counter += len(self.clusters[i].compressed_phs)
-        for i in range(len(clusters)):
-            vis_bytes += pvs_offsets[i].to_bytes(4, byteorder="little")
-            vis_bytes += phs_offsets[i].to_bytes(4, byteorder="little")
-        for i in range(len(clusters)):
-            # print(f"offset: {pvs_offsets[i]} - current: {len(vis_bytes)}")
-            vis_bytes += self.clusters[i].compressed_pvs
-        for i in range(len(clusters)):
-            vis_bytes += self.clusters[i].compressed_phs
-        # print(f"initial phs: {initial_phs_offset} - last pvs: {pvs_offsets_counter}")
+        if not len(clusters) == 0:
+            vis_bytes += len(clusters).to_bytes(4, byteorder="little")
+            pvs_offsets_counter = 4 + 8 * len(clusters)
+            pvs_offsets = list()
+            phs_offsets_counter = 4 + 8 * len(clusters)
+            for i in range(len(clusters)):
+                phs_offsets_counter += len(self.clusters[i].compressed_pvs)
+            initial_phs_offset = phs_offsets_counter
+            phs_offsets = list()
+            for i in range(len(clusters)):
+                pvs_offsets.append(pvs_offsets_counter)
+                pvs_offsets_counter += len(self.clusters[i].compressed_pvs)
+                phs_offsets.append(phs_offsets_counter)
+                phs_offsets_counter += len(self.clusters[i].compressed_phs)
+            for i in range(len(clusters)):
+                vis_bytes += pvs_offsets[i].to_bytes(4, byteorder="little")
+                vis_bytes += phs_offsets[i].to_bytes(4, byteorder="little")
+            for i in range(len(clusters)):
+                # print(f"offset: {pvs_offsets[i]} - current: {len(vis_bytes)}")
+                vis_bytes += self.clusters[i].compressed_pvs
+            for i in range(len(clusters)):
+                vis_bytes += self.clusters[i].compressed_phs
+            # print(f"initial phs: {initial_phs_offset} - last pvs: {pvs_offsets_counter}")
 
         self.binary_lumps[3] = vis_bytes
 
@@ -514,7 +518,8 @@ class Q2BSP:
     def __get_entities(self):
         entities = list()
         # print(chr(*struct.unpack("<I", b"0x88")))
-        raw_entity_lines = bytearray(self.binary_lumps[0]).decode("ISO-8859-1")
+
+        raw_entity_lines = bytearray(self.binary_lumps[0]).decode("cp1252")
         # print(raw_entity_lines)
         entity_lines = raw_entity_lines.rstrip("\x00")
         # print(entity_lines.split("\n"))
@@ -562,7 +567,7 @@ class Q2BSP:
             entity_lines.append("}")
         # print(entity_lines)
         entity_lines = "\n".join(entity_lines)+"\n\x00"
-        entity_bytes = entity_lines.encode("ISO 8859-1")
+        entity_bytes = entity_lines.encode("cp1252")
         self.binary_lumps[0] = entity_bytes
 
     class Model:
@@ -733,6 +738,7 @@ class Q2BSP:
             self.lump_sizes[self.lump_order[i]].lump_end = current_offset + len(
                 self.binary_lumps[self.lump_order[i]])
             current_offset += ((len(self.binary_lumps[self.lump_order[i]]) + 3) & ~3)
+            # print(self.lump_sizes[self.lump_order[i]])
 
     def save_map(self, path, suffix):
         bytes2 = str.encode(self.magic)
