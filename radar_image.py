@@ -79,6 +79,10 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
         else:
             # rotate polys and draw
             poly_rot = cl.get_rot_polys(polys, *view_rotations[image_type])
+            plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in poly_rot] for a in b],
+                        [a for b in [[vert[2] for vert in fac.vertices] for fac in poly_rot] for a in b])
+            plt.show()
+
             img = cl.create_poly_image(poly_rot, None, mean_colors, max_resolution)
             # img.thumbnail((512, 512), Image.ANTIALIAS)
             img.save(image_path)
