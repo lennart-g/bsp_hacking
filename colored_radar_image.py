@@ -354,6 +354,13 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
     #         polys[idx1].vertices[idx2][y] = polys[idx1].vertices[idx2][y] / max(pmax_x-pmin_x, pmax_y-pmin_y) * max_resolution
     #         polys[idx1].vertices[idx2][z] = polys[idx1].vertices[idx2][z] -=
 
+    # image dimensions are set to these new maximum x and y values ... before perspective projection
+    img = Image.new("RGBA",
+                    (int((pmax_x-pmin_x)/max((pmax_x-pmin_x, pmax_y-pmin_y))*max_resolution),
+                     int((pmax_y-pmin_y)/max((pmax_x-pmin_x, pmax_y-pmin_y))*max_resolution)),
+                    (255, 255, 255, 100))
+    draw = ImageDraw.Draw(img, "RGBA")
+
 
     for idx, face in enumerate(polys):
         # might be necessary at some point where the near clipping plane is inside of the map
