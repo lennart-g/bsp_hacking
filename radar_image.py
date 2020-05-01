@@ -41,7 +41,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
     if image_type not in image_types_axes.keys() and image_type not in view_rotations.keys():
         print("Error: No such image type", image_type, "\n pick one of ", *image_types_axes.keys())
         return
-    if mode == 0:  # true color solid
+    if mode == 0 or mode==1:  # true color solid
         # load geometry and color information from bsp file
         polys, mean_colors = cl.get_polygons(path_to_pball + map_path, path_to_pball)
         if (image_type == "rotated" or image_type == "all") and not (x_an or y_an or z_an):
@@ -63,13 +63,13 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             fig_solid.suptitle(map_path.replace(".bsp", "").split("/")[len(map_path.split("/")) - 1] + " solid")
 
             poly_list = cl.get_rot_polys(polys, *view_rotations["front"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax1, mean_colors, max_resolution)
+            cl.create_poly_image(poly_list, s_ax1, mean_colors, mode == 0, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["top"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax2, mean_colors, max_resolution)
+            cl.create_poly_image(poly_list, s_ax2, mean_colors, mode == 0, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["right"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax3, mean_colors, max_resolution)
+            cl.create_poly_image(poly_list, s_ax3, mean_colors, mode == 0, max_resolution)
             poly_list = cl.get_rot_polys(polys, *view_rotations["rotated"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax4, mean_colors, max_resolution)
+            cl.create_poly_image(poly_list, s_ax4, mean_colors, mode == 0, max_resolution)
             s_ax1.set_title("front view")
             s_ax2.set_title("top view")
             s_ax3.set_title("side view")
@@ -83,10 +83,10 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             #             [a for b in [[vert[2] for vert in fac.vertices] for fac in poly_rot] for a in b])
             # plt.show()
 
-            img = cl.create_poly_image(poly_rot, None, mean_colors, max_resolution)
+            img = cl.create_poly_image(poly_rot, None, mean_colors, mode == 0, max_resolution)
             # img.thumbnail((512, 512), Image.ANTIALIAS)
             img.save(image_path)
-    elif mode == 1:  # heatmap solid
+    elif mode == 2:  # heatmap solid
         polys, texture_ids, mean_colors = hm.get_polys(path_to_pball + map_path, path_to_pball)
         poly_rot = hm.get_rot_polys(polys, 90, 0, 0) # fixed value rotation
         polys = hm.sort_by_z(polys)
@@ -114,7 +114,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             hm.create_poly_image(polys, None, opacity=50, x=image_types_axes[image_type][0],
                                  y=image_types_axes[image_type][1]).save(image_path)
 
-    elif mode == 2:  # heatmap wireframe
+    elif mode == 3:  # heatmap wireframe
         lines = wf.get_line_coords(path_to_pball + map_path)
         lines_rot = wf.get_rot_polys(lines, 10, 0, 70)
         if image_type == "all":

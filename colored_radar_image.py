@@ -82,7 +82,6 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
             print(texture)
-        # print(texture)
         if True in [x in texture.lower() for x in ["origin", "clip", "skip", "hint", "trigger"]]:
             print(texture)
             color_rgb = (0,0,0,0)  # actually rgba
@@ -237,7 +236,7 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
     return faces
 
 
-def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[Tuple[int]], max_resolution: int = 2048) -> Optional[
+def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[Tuple[int]], perspective: bool, max_resolution: int = 2048) -> Optional[
     Image.Image]:
     """
     Draws radar image and assigns it to axes or returns it
@@ -273,18 +272,19 @@ def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[T
     shift = shift if shift > 0 else 0
     # print("shift", shift)
 
-    # applies projection on x and y values
-    for idx1, face in enumerate(polys):
-        for idx2, vert in enumerate(face.vertices):
-            # shifts all vertices on z axis to render all with set fov
-            polys[idx1].vertices[idx2][z] += shift
-            # for not rendering anything in front of the near clipping plane
-            if polys[idx1].vertices[idx2][z] >= 1:
-                polys[idx1].vertices[idx2][x] = (vert[x]-max_x/2)/vert[z]*max(max_x, max_y) + max_x/2
-                polys[idx1].vertices[idx2][y] = (vert[y]-max_y/2)/vert[z]*max(max_x, max_y) + max_y/2
-            else:
-                polys[idx1].vertices[idx2][x] = None
-                polys[idx1].vertices[idx2][y] = None
+    if perspective:
+        # applies projection on x and y values
+        for idx1, face in enumerate(polys):
+            for idx2, vert in enumerate(face.vertices):
+                # shifts all vertices on z axis to render all with set fov
+                polys[idx1].vertices[idx2][z] += shift
+                # for not rendering anything in front of the near clipping plane
+                if polys[idx1].vertices[idx2][z] >= 1:
+                    polys[idx1].vertices[idx2][x] = (vert[x]-max_x/2)/vert[z]*max(max_x, max_y) + max_x/2
+                    polys[idx1].vertices[idx2][y] = (vert[y]-max_y/2)/vert[z]*max(max_x, max_y) + max_y/2
+                else:
+                    polys[idx1].vertices[idx2][x] = None
+                    polys[idx1].vertices[idx2][y] = None
 
     # min and max x and y values of the projected vertices
     pmin_x = round(min([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
