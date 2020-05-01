@@ -1,3 +1,4 @@
+
 import copy
 import os
 from typing import Optional
@@ -6,8 +7,6 @@ import numpy as np
 from PIL import WalImageFile
 
 from Q2BSP import *
-
-import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -31,6 +30,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # instead of directly reading all information from file, the Q2BSP class is used for reading
     temp_map = Q2BSP(path)
 
+
     # get a list of unique texture names (which are stored without an extension -> multiple ones must be tested)
     texture_list = [x.get_texture_name() for x in temp_map.tex_infos]
     texture_list_cleaned = list(dict.fromkeys(texture_list))
@@ -41,7 +41,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     for texture in texture_list_cleaned:
         color = (0, 0, 0)
         # list of all files in stored subdirectory
-        texture_options = os.listdir(pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1]))
+        texture_options = os.listdir(pball_path+"/textures/"+"/".join(texture.lower().split("/")[:-1]))
         texture_path = ""
         # iterate through texture options until one name matches stored texture name
         for idx, tex_option in enumerate(texture_options):
@@ -83,11 +83,11 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
-            print("Black texture:", texture)
+            print(texture)
         # print(texture)
         if True in [x in texture.lower() for x in ["origin", "clip", "skip", "hint", "trigger"]]:
-            print("Invisible surface:", texture)
-            color_rgb = (0, 0, 0, 0)  # actually rgba
+            print(texture)
+            color_rgb = (0,0,0,0)  # actually rgba
         average_colors.append(color_rgb)
 
     # instead of storing face color directly in the Polygon object, store an index so that you can easily change one
@@ -96,13 +96,13 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     tex_ids = [texture_list_cleaned.index(texture_list[tex_index]) for tex_index in tex_indices]
 
     # each face is a list of vertices stored as Tuples
-    faces: List[List[List]] = list()
+    faces: List[List[Tuple]] = list()
     skip_surfaces = []
     for idx, face in enumerate(temp_map.faces):
         flags = temp_map.tex_infos[face.texture_info].flags
         if flags.hint or flags.nodraw or flags.sky or flags.skip:
             skip_surfaces.append(idx)
-        current_face: List[List] = list()
+        current_face: List[Tuple] = list()
         for i in range(face.num_edges):
             face_edge = temp_map.face_edges[face.first_edge + i]
             if face_edge > 0:
@@ -113,6 +113,15 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
                 if not temp_map.vertices[vert] in current_face:
                     current_face.append(temp_map.vertices[vert])
         faces.append(current_face)
+
+    # get minimal of all x y and z values and move all vertices so they all have coordinate values >= 0
+    min_x = min([a[0] for b in faces for a in b])
+    min_y = min([a[1] for b in faces for a in b])
+    min_z = min([a[2] for b in faces for a in b])
+
+    polys_normalized = [[[vertex[0] - min_x,
+                          vertex[1] - min_y,
+                          vertex[2] - min_z] for vertex in edge] for edge in faces]
 
     # get normals out of the Q2BSP object, if face.plane_side != 0, flip it (invert signs of coordinates)
     normal_list = [x.normal for x in temp_map.planes]
@@ -127,71 +136,24 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
             normal = list(normal_list[face.plane])
         normals.append(normal)
 
-    # TODO: Why does this have a critical effect?
-    faces = [[[vertex[0], vertex[1], vertex[2]] for vertex in edge] for edge in faces]
-
     # construct polygon list out of the faces, indices into unique textures aka colors (two different textures could
     # have the same mean color), normals
     polygons: List[Polygon] = list()
-    for idx, poly in enumerate(faces):
+    for idx, poly in enumerate(polys_normalized):
         polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
         polygons.append(polygon)
-
-    polygons = centralize_faces(polygons)
 
     print(skip_surfaces, "skip")
     for i in skip_surfaces[::-1]:
         polygons.pop(i)
 
+    # for idx, poly in enumerate(polygons):
+    #     print(average_colors[poly.tex_id])
+    #     if average_colors[poly.tex_id] == (0,0,0,0):
+    #         print("here")
+    #         polygons.pop(len(polygons)-1-idx)
+
     return polygons, average_colors
-
-
-def delta_min_max(faces: List[Polygon], x: int = 0, y: int = 1, z: int = 2) -> Tuple[float, float, float]:
-    """
-    calculates difference between min and max value for x y and z
-    :param faces: list of polygon objects
-    :param x: optional - index of x coordinate (different on image)
-    :param y: optional - index of x coordinate (different on image)
-    :param z: optional - index of x coordinate (different on image)
-    :return: three floats showing the difference
-    """
-    min_x = min([a for b in [[vert[x] for vert in face.vertices] for face in faces] for a in b])
-    min_y = min([a for b in [[vert[y] for vert in face.vertices] for face in faces] for a in b])
-    min_z = min([a for b in [[vert[z] for vert in face.vertices] for face in faces] for a in b])
-    max_x = max([a for b in [[vert[x] for vert in face.vertices] for face in faces] for a in b])
-    max_y = max([a for b in [[vert[y] for vert in face.vertices] for face in faces] for a in b])
-    max_z = max([a for b in [[vert[z] for vert in face.vertices] for face in faces] for a in b])
-    return max_x - min_x, max_y - min_y, max_z - min_z
-
-
-def centralize_faces(faces: List[Polygon], x: int = 0, y: int = 1, z: int = 2) -> List[Polygon]:
-    """
-    shifts coordinates so min = -max for x y and z
-    :param faces: list of polygon objects
-    :return: list of polygon objects
-    """
-    polygons = copy.deepcopy(faces)
-
-    plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polygons] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polygons] for a in b])
-    plt.show()
-
-
-    min_x = min([a for b in [[vert[x] for vert in face.vertices] for face in polygons] for a in b])
-    min_y = min([a for b in [[vert[y] for vert in face.vertices] for face in polygons] for a in b])
-    min_z = min([a for b in [[vert[z] for vert in face.vertices] for face in polygons] for a in b])
-    (size_x, size_y, size_z) = delta_min_max(faces, x, y, z)
-
-    # moves all polys so that all coordinate values >= 0 and then moves so that (min+max)/2 = 0
-    for idx1, face in enumerate(polygons):
-        for idx2, vert in enumerate(face.vertices):
-            polygons[idx1].vertices[idx2][x] = polygons[idx1].vertices[idx2][x] - min_x - size_x / 2
-            polygons[idx1].vertices[idx2][y] = polygons[idx1].vertices[idx2][y] - min_y - size_y / 2
-            polygons[idx1].vertices[idx2][z] = polygons[idx1].vertices[idx2][z] - min_z
-
-    plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polygons] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polygons] for a in b])
-    plt.show()
-
-    return polygons
 
 
 def sort_by_axis(faces: List[Polygon], axis: int) -> List[Polygon]:
@@ -203,16 +165,9 @@ def sort_by_axis(faces: List[Polygon], axis: int) -> List[Polygon]:
     :return: sorted list of Polygons
     """
     faces = copy.deepcopy(faces)
-
-    # plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in faces] for a in b], [a for b in [[vert[2] for vert in fac.vertices] for fac in faces] for a in b])
-    # plt.show()
-
     order = [mean(depth_coordinate) for depth_coordinate in
              [[vert[axis] for vert in face] for face in [face.vertices for face in faces]]]
-    faces_sorted = [x for _, x in sorted(zip(order, faces), key=operator.itemgetter(0), reverse=False)]
-    # plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in faces_sorted] for a in b], [a for b in [[vert[2] for vert in fac.vertices] for fac in faces_sorted] for a in b])
-    # plt.show()
-
+    faces_sorted = [x for _, x in sorted(zip(order, faces), key=operator.itemgetter(0), reverse=True)]
     return faces_sorted
 
 
@@ -231,12 +186,12 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
             # rotate each vertex
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][0] = math.cos(math.radians(z_angle)) * old_x - math.sin(
                     math.radians(z_angle)) * old_y
                 faces[idx0].vertices[idx1][1] = math.sin(math.radians(z_angle)) * old_x + math.cos(
                     math.radians(z_angle)) * old_y
             # rotate normals once per face
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.x = math.cos(math.radians(z_angle)) * old_normal_x - math.sin(
                 math.radians(z_angle)) * old_normal_y
             faces[idx0].normal.y = math.sin(math.radians(z_angle)) * old_normal_x + math.cos(
@@ -246,12 +201,11 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
         for idx0, face in enumerate(faces):
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][0] = math.cos(math.radians(y_angle)) * old_x + math.sin(
                     math.radians(y_angle)) * old_z
                 faces[idx0].vertices[idx1][2] = -math.sin(math.radians(y_angle)) * old_x + math.cos(
                     math.radians(y_angle)) * old_z
-
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.x = math.cos(math.radians(y_angle)) * old_normal_x + math.sin(
                 math.radians(y_angle)) * old_normal_z
             faces[idx0].normal.z = -math.sin(math.radians(y_angle)) * old_normal_x + math.cos(
@@ -261,25 +215,26 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
         for idx0, face in enumerate(faces):
             for idx1, vertex in enumerate(face.vertices):
                 old_x, old_y, old_z = faces[idx0].vertices[idx1]
+                old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
                 faces[idx0].vertices[idx1][1] = math.cos(math.radians(x_angle)) * old_y - math.sin(
                     math.radians(x_angle)) * old_z
                 faces[idx0].vertices[idx1][2] = math.sin(math.radians(x_angle)) * old_y + math.cos(
                     math.radians(x_angle)) * old_z
-            old_normal_x, old_normal_y, old_normal_z = faces[idx0].normal
             faces[idx0].normal.y = math.cos(math.radians(x_angle)) * old_normal_y - math.sin(
                 math.radians(x_angle)) * old_normal_z
             faces[idx0].normal.z = math.sin(math.radians(x_angle)) * old_normal_y + math.cos(
                 math.radians(x_angle)) * old_normal_z
 
-    plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in faces] for a in b], [a for b in [[vert[2] for vert in fac.vertices] for fac in faces] for a in b])
-    plt.show()
+    # moves all polys so that all coordinate values >= 0
+    min_x = min([a for b in [[vert[0] for vert in face.vertices] for face in faces] for a in b])
+    min_y = min([a for b in [[vert[1] for vert in face.vertices] for face in faces] for a in b])
+    min_z = min([a for b in [[vert[2] for vert in face.vertices] for face in faces] for a in b])
 
-    # faces = centralize_faces(faces, 0, 1, 2)
-
-    plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in faces] for a in b], [a for b in [[vert[2] for vert in fac.vertices] for fac in faces] for a in b])
-    plt.show()
-    # return
-
+    for idx1, face in enumerate(faces):
+        for idx2, vert in enumerate(face.vertices):
+            faces[idx1].vertices[idx2][0] = vert[0] - min_x + 1 # so nothing of the map is clipped off
+            faces[idx1].vertices[idx2][1] = vert[1] - min_y
+            faces[idx1].vertices[idx2][2] = vert[2] - min_z
 
     return faces
 
@@ -294,134 +249,107 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
     :param x: coordinate that will be drawn as x value
     :param y: coordinate that will be drawn as y value
     :param title: only relevant when image is drawn on axes
-    :param ids:
-    :param average_colors:
-    :return:
+    :param ids: 
+    :param average_colors: 
+    :return: 
     """
     # y value will be the images x value and (max z value - z) will be images y value
-    x: int = 1
-    y: int = 2
-    z: int = 3 - (x + y)
-    plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polys] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polys] for a in b])
-    plt.show()
-    polys = centralize_faces(polys, x, y, z)
-
+    x = 1
+    y = 2
+    z = 3 - (x + y)
     # sorted descending because the bigger the x value the further away the polygon is from camera
     polys = sort_by_axis(polys, z)
     # round vertices so they are integers and match pixel positions
-    # plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polys] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polys] for a in b])
-    # plt.show()
 
-    size_x, size_y = delta_min_max(polys, x, y, z)[:2]
-    # print(size_x, size_y, "sizes")
+    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
 
-    # # normalizes coordinates to be in range of +- width/2 and +- height/2
-    # for idx1, face in enumerate(polys):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(size_x, size_y) * max_resolution)
-    #         polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(size_x, size_y) * max_resolution)
-    #         polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(size_x, size_y) * max_resolution)
-    # normalizes coordinates to be in range of +- width/2 and +- height/2
+    fov = 20
 
-    # min_z = round(min([vert[z] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    for idx1, face in enumerate(polys):
+        for idx2, vert in enumerate(face.vertices):
+            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
+            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
+            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
 
-    # for idx1, face in enumerate(polys):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         # polys[idx1].vertices[idx2][z] -=min_z
-    #         polys[idx1].vertices[idx2][x] = polys[idx1].vertices[idx2][x] / max(size_x, size_y) * max_resolution
-    #         polys[idx1].vertices[idx2][y] = polys[idx1].vertices[idx2][y] / max(size_x, size_y) * max_resolution
-    #
-    # # size_x1, size_y1 = delta_min_max(polys, x, y, z)[:2]
-    # print(size_x, size_y, "sizes")
-    #
-
-    # plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polys] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polys] for a in b])
-    # plt.show()
-
-    min_x = min([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]])
-    max_y = max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]])
-    min_x = -delta_min_max(polys, x, y, z)[0]/2
-
-    min_x = - size_x / max(size_x, size_y) * max_resolution / 2
-    max_y = size_y / max(size_x, size_y) * max_resolution / 2
-    #
-    # for idx1, face in enumerate(polys):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         # polys[idx1].vertices[idx2][z] -=min_z
-    #         polys[idx1].vertices[idx2][x] = round(polys[idx1].vertices[idx2][x] / max(size_x, size_y) * max_resolution)
-    #         polys[idx1].vertices[idx2][y] = round(polys[idx1].vertices[idx2][y] / max(size_x, size_y) * max_resolution)
-
-    image_width = max_resolution / max(size_x, size_y) * size_x
-    image_height = max_resolution / max(size_x, size_y) * size_y
+    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
 
     img = Image.new("RGBA",
-                    (round(image_width),
-                     round(image_height)),
+                    (max_x,
+                     max_y),
                     (255, 255, 255, 100))
     draw = ImageDraw.Draw(img, "RGBA")
-
-    plt.scatter([a for b in [[vert[x] for vert in fac.vertices] for fac in polys] for a in b], [a for b in [[vert[y] for vert in fac.vertices] for fac in polys] for a in b])
-    plt.show()
-
+    # import matplotlib.pyplot as plt
+    all_verts = [a for b in [[vert for vert in face.vertices] for face in polys] for a in b]
+    # plt.scatter([v[x] for v in all_verts], [v[y] for v in all_verts])
+    # plt.show()
 
     # the view vector is the direction the camera is looking
     view_vector = [0, 0, 0]
-    view_vector[z] = -1  # dynamic in case x y z values get changed again
-    for idx, face in enumerate(polys):
-        for idx2, vert in enumerate(face.vertices):
-            # polys[idx1].vertices[idx2][z] -=min_z
-            face.vertices[idx2][x] = face.vertices[idx2][x] / max(size_x, size_y) * max_resolution
-            face.vertices[idx2][y] = face.vertices[idx2][y] / max(size_x, size_y) * max_resolution
+    view_vector[z] = 1  # dynamic in case x y z values get changed again
 
-        # vertices x,y centralized around the origin, min(z) = 0
-        # mean_x = mean([vert[x] for vert in face.vertices])
-        # mean_y = mean([vert[y] for vert in face.vertices])
-        # mean_z = -mean([vert[z] for vert in face.vertices])
-        # view_vector = [mean_x, mean_y, mean_z]
-        # print(view_vector)
+    angles_x = [[np.arctan((vert[x] - max_x/2) / vert[z]), idex, x] for vert, idex in zip(all_verts, list(range(len(all_verts))))]
+    angles_y = [[np.arctan((vert[y] - max_y/2) / vert[z]), idex, y] for vert, idex in zip(all_verts, list(range(len(all_verts))))]
+    # angles_x = [[np.arctan(vert[x] / vert[z]), idex, x] for vert, idex in zip(all_verts, list(range(len(all_verts))))]
+    # angles_y = [[np.arctan(vert[y] / vert[z]), idex, y] for vert, idex in zip(all_verts, list(range(len(all_verts))))]
+    # angles_y = [np.arctan(vert[y] / vert[z]) for vert in all_verts]
+    # min_an_x = 0#math.degrees(min(angles_x))
+    min_an_x = min(angles_x, key=operator.itemgetter(0))
+    min_an_x[0] = abs(min_an_x[0])
+    max_an_x = max(angles_x, key=operator.itemgetter(0))
+    # min_an_y = 0#math.degrees(min(angles_y))
+    min_an_y = min(angles_y, key=operator.itemgetter(0))
+    min_an_y[0] = abs(min_an_y[0])
+    max_an_y = max(angles_y, key=operator.itemgetter(0))
+    print(f"fov: {fov} - minx: {math.degrees(min_an_x[0])} - miny: {math.degrees(min_an_y[0])} - maxx: {math.degrees(max_an_x[0])} - maxy: {math.degrees(max_an_y[0])}")
+
+    max_idex =max((max_an_x, max_an_y, min_an_x, min_an_y), key=operator.itemgetter(0))
+    print("midex", max_idex)
+    shift = all_verts[max_idex[1]][max_idex[2]] / np.tan(math.radians(fov)) - all_verts[max_idex[1]][z]
+    print("shift", shift)
+
+    for idx1, face in enumerate(polys):
+        for idx2, vert in enumerate(face.vertices):
+            polys[idx1].vertices[idx2][z] += shift
+            polys[idx1].vertices[idx2][x] = max_x - (vert[x]-max_x/2)/vert[z]*max(max_x, max_y) - max_x/2
+            polys[idx1].vertices[idx2][y] = max_y - (vert[y]-max_y/2)/vert[z]*max(max_x, max_y) - max_y/2
+
+    # max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    # max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    #
+    # print("done1")
+    #
+    # # for idx1, face in enumerate(polys):
+    # #     for idx2, vert in enumerate(face.vertices):
+    # #         polys[idx1].vertices[idx2][x] = round(polys[idx1].vertices[idx2][x] / max(max_x, max_y) * max_resolution)
+    # #         polys[idx1].vertices[idx2][y] = round(polys[idx1].vertices[idx2][y] / max(max_x, max_y) * max_resolution)
+    #
+    #
+    # img = Image.new("RGBA",
+    #                 (max_x,
+    #                  max_y),
+    #                 (255, 255, 255, 100))
+    #
+    # draw = ImageDraw.Draw(img, "RGBA")
+
+    for idx, face in enumerate(polys):
         angle = math.degrees(np.arccos(np.dot(view_vector, list(face.normal)) / (
                 np.linalg.norm(view_vector) * np.linalg.norm(list(face.normal)))))
         # only render faces facing in camera direction
         if angle < 90:
             continue
-        # draw polygon upside down with precalculated mean texture color
-        if average_colors[face.tex_id] == (0, 0, 0, 0):
+        if any([vert[z] <= 0 for vert in face.vertices]):
             continue
-
-        pixel_coordinates = [(vert[x] - min_x, max_y - vert[y]) for vert in face.vertices]
-        # pixel_coordinates = [(vert[x],vert[y]) for vert in face.vertices]
-
-        # print([vert[z] for vert in face.vertices])
-        # fov = 45
-        # distance = 50
-        # shift = [0,-2500]
-
-        # pixel_coordinates = list()
-        # for idx2, vert in enumerate(face.vertices):
-        #     vert[z] += distance
-        #     vert[x] += shift[0]
-        #     vert[y] += shift[1]
-        #     # print(vert[x], vert[y])
-        #     width = (-vert[x] * size_x) / (2 * (vert[z]) * math.tan(math.radians(fov)))
-        #     height = (vert[y] * size_x) / (2 * (vert[z]) * math.tan(math.radians(fov)))
-        #     # print("width:", round(width + size_x/2), "height", round(height + 2/6*size_x))
-        #     pixel_coordinates.append((round(width + size_x/2), round(height + 2/6*size_x)))
-        #
-        # if not any([width < size_x and height < size_x*2/3 for (width, height) in pixel_coordinates]):
-        #     continue
-
-        # # pixel coordinates ought to be moved to be moved to min = 0, normalized to fit on image and x inverted
-        # # must happen in a manner that doesnt depend on current vertices but all of the vertices
-        # pixel_coordinates = [(width - size_x/2, size_y/2 - (height)) for (width, height) in pixel_coordinates]
-        # width and height must be divided by highest size delta to be [-0.5, 0.5]
-        # width and height must be +0.5 to be in [0, 1]
-        # height must be 1-height to match image origin at upper left
-        # width and height must be multiplied with min(height, width) to be in [0, min(height, width)
-        # pixel_coordinates = [((width/max(size_x, size_y) + 0.5)*max_resolution,
-        #                       image_height-((height/max(size_x, size_y) + 0.5))*max_resolution)
-        #                      for (width, height) in pixel_coordinates]
-
-        draw.polygon([(round(width), round(height)) for (width, height) in pixel_coordinates], fill=average_colors[face.tex_id])
+        # sizes = list()
+        # for vert in face.vertices:
+        #     # size_x = (vert[x]-max_x/2)/vert[z]*max(max_x, max_y)
+        #     # size_y = (vert[y]-max_y/2)/vert[z]*max(max_x, max_y)
+        #     sizes.append((vert[x], vert[y]))
+            # print("sizes", size_x, size_y)
+        # draw polygon upside down with precalculated mean texture color
+        if not average_colors[face.tex_id] == (0,0,0,0):
+            draw.polygon([(size[x], size[y]) for size in face.vertices], fill=average_colors[face.tex_id], outline=(0,0,0))
 
     # if render mode == "all" the image isn't saved but assigned to an axes
     if not ax:
