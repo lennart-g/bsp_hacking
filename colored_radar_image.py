@@ -1,12 +1,10 @@
-
 import copy
 import os
 from typing import Optional
-
 import numpy as np
 from PIL import WalImageFile
-
 from Q2BSP import *
+import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -239,19 +237,15 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
     return faces
 
 
-def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: int = 2048) -> Optional[
+def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[Tuple[int]], max_resolution: int = 2048) -> Optional[
     Image.Image]:
     """
     Draws radar image and assigns it to axes or returns it
-    :param polys: faces of the bsp
-    :param ax: axes to draw to
-    :param opacity: opacity of individual faces
-    :param x: coordinate that will be drawn as x value
-    :param y: coordinate that will be drawn as y value
-    :param title: only relevant when image is drawn on axes
-    :param ids: 
-    :param average_colors: 
-    :return: 
+    :param polys:
+    :param ax:
+    :param average_colors:
+    :param max_resolution:
+    :return:
     """
     # y value will be the images x value and (max z value - z) will be images y value
     x = 1
@@ -263,29 +257,10 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
 
     max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    print("maxs before rescaling", max_x, max_y)
+    # print("maxs before rescaling", max_x, max_y)
 
     # highest visible angle between camera / near plane normal and vertex
     fov = 50
-
-    # # scales all polys so that min values stay 0,0,0 amd max values <= max_resolution
-    # for idx1, face in enumerate(polys):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
-    #         polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
-    #         polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
-
-    # # new max x and y values, one should be max_resolution, other one smaller or equal
-    # max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    # max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    # print("maxs after rescaling", max_x, max_y)
-
-    # # image dimensions are set to these new maximum x and y values ... before perspective projection
-    # img = Image.new("RGBA",
-    #                 (max_resolution,
-    #                  max_resolution),
-    #                 (255, 255, 255, 100))
-    # draw = ImageDraw.Draw(img, "RGBA")
 
     # the view vector is the direction the camera is looking ... in orthographic projection
     view_vector = [0, 0, 0]
@@ -293,45 +268,17 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
 
     # calculates most extreme (highest absolute) value for all vector x and y angles
     all_verts = [a for b in [[vert for vert in face.vertices] for face in polys] for a in b]
-    # angles_x = [[np.arctan((vert[x] - max_x/2) / vert[z]), idex, x] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
-    # angles_y = [[np.arctan((vert[y] - max_y/2) / vert[z]), idex, y] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
-    # min_an_x = min(angles_x, key=operator.itemgetter(0))
-    # # min_an_x[0] = abs(min_an_x[0])
-    # max_an_x = max(angles_x, key=operator.itemgetter(0))
-    # min_an_y = min(angles_y, key=operator.itemgetter(0))
-    # # min_an_y[0] = abs(min_an_y[0])
-    # max_an_y = max(angles_y, key=operator.itemgetter(0))
-    # print(f"fov: {fov} - minx: {math.degrees(min_an_x[0])} - miny: {math.degrees(min_an_y[0])} - maxx: {math.degrees(max_an_x[0])} - maxy: {math.degrees(max_an_y[0])}")
-    #
-    # # determines shift required to display all projected vertices on image
-    # max_idex =max((max_an_x, max_an_y, min_an_x, min_an_y), key=lambda x:abs(x[0]))
-    # print("midex", max_idex, math.degrees(max_idex[0]))
-    # shift = all_verts[max_idex[1]][max_idex[2]] / np.tan(math.radians(fov)) - all_verts[max_idex[1]][z]
     shifts = [(vert[x] / np.tan(math.radians(fov)) - vert[z],vert[y] / np.tan(math.radians(fov)) - vert[z]) for vert in all_verts]
     shift = max([a for b in shifts for a in b])
     shift = shift if shift > 0 else 0
-    print("shift", shift)
-    # print("test", math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/all_verts[min_an_x[1]][z])),
-    #       math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/(all_verts[min_an_x[1]][z]+shift))),
-    #       all_verts[min_an_x[1]])
-    # print("test2", math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/all_verts[max_an_x[1]][z])),
-    #       math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/(all_verts[max_an_x[1]][z]+shift))),
-    #       all_verts[max_an_x[1]])
-    # print("test3", math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/all_verts[min_an_y[1]][z])),
-    #       math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/(all_verts[min_an_y[1]][z]+shift))),
-    #       all_verts[min_an_y[1]])
-    # print("test4", math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/all_verts[max_an_y[1]][z])),
-    #       math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/(all_verts[max_an_y[1]][z]+shift))),
-    #       all_verts[max_an_y[1]])
+    # print("shift", shift)
 
-    # shifts map far enough backward or forward to fill whole image ... doesnt work well yet
     # applies projection on x and y values
     for idx1, face in enumerate(polys):
         for idx2, vert in enumerate(face.vertices):
+            # shifts all vertices on z axis to render all with set fov
             polys[idx1].vertices[idx2][z] += shift
-            # polys[idx1].vertices[idx2][z] -= 3200
-            # polys[idx1].vertices[idx2][y] += 920
-            # polys[idx1].vertices[idx2][x] += 100
+            # for not rendering anything in front of the near clipping plane
             if polys[idx1].vertices[idx2][z] >= 1:
                 polys[idx1].vertices[idx2][x] = (vert[x]-max_x/2)/vert[z]*max(max_x, max_y) + max_x/2
                 polys[idx1].vertices[idx2][y] = (vert[y]-max_y/2)/vert[z]*max(max_x, max_y) + max_y/2
@@ -339,20 +286,13 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
                 polys[idx1].vertices[idx2][x] = None
                 polys[idx1].vertices[idx2][y] = None
 
+    # min and max x and y values of the projected vertices
     pmin_x = round(min([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     pmin_y = round(min([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    pmin_z = round(min([vert[z] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     pmax_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     pmax_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    pmax_z = round(max([vert[z] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    print("mins projected", pmin_x, pmin_y, pmin_z)
-    print("maxs projected", pmax_x, pmax_y, pmax_z)
-
-    # for idx1, face in enumerate(polys):
-    #     for idx2, vert in enumerate(face.vertices):
-    #         polys[idx1].vertices[idx2][x] = polys[idx1].vertices[idx2][x] / max(pmax_x-pmin_x, pmax_y-pmin_y) * max_resolution
-    #         polys[idx1].vertices[idx2][y] = polys[idx1].vertices[idx2][y] / max(pmax_x-pmin_x, pmax_y-pmin_y) * max_resolution
-    #         polys[idx1].vertices[idx2][z] = polys[idx1].vertices[idx2][z] -=
+    # print("mins projected", pmin_x, pmin_y)
+    # print("maxs projected", pmax_x, pmax_y)
 
     # image dimensions are set to these new maximum x and y values ... before perspective projection
     img = Image.new("RGBA",
@@ -361,11 +301,10 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
                     (255, 255, 255, 100))
     draw = ImageDraw.Draw(img, "RGBA")
 
-
     for idx, face in enumerate(polys):
         # might be necessary at some point where the near clipping plane is inside of the map
         if any([not vert[x] or not vert[y] for vert in face.vertices]):
-            print("skipped")
+            # print("skipped")
             continue
         # calculates center of mass for face, will represent the camera viewing direction to this face
         mean_vertex = [mean([vert[0] for vert in face.vertices]), mean([vert[1]-max_x/2 for vert in face.vertices]), mean([vert[2]-max_y/2 for vert in face.vertices])]
