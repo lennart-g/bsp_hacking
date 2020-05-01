@@ -266,19 +266,19 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
     print("maxs before rescaling", max_x, max_y)
 
     # highest visible angle between camera / near plane normal and vertex
-    fov = 85
+    fov = 50
 
-    # scales all polys so that min values stay 0,0,0 amd max values <= max_resolution
-    for idx1, face in enumerate(polys):
-        for idx2, vert in enumerate(face.vertices):
-            polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
-            polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
-            polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
+    # # scales all polys so that min values stay 0,0,0 amd max values <= max_resolution
+    # for idx1, face in enumerate(polys):
+    #     for idx2, vert in enumerate(face.vertices):
+    #         polys[idx1].vertices[idx2][0] = round(polys[idx1].vertices[idx2][0] / max(max_x, max_y) * max_resolution)
+    #         polys[idx1].vertices[idx2][1] = round(polys[idx1].vertices[idx2][1] / max(max_x, max_y) * max_resolution)
+    #         polys[idx1].vertices[idx2][2] = round(polys[idx1].vertices[idx2][2] / max(max_x, max_y) * max_resolution)
 
-    # new max x and y values, one should be max_resolution, other one smaller or equal
-    max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
-    print("maxs after rescaling", max_x, max_y)
+    # # new max x and y values, one should be max_resolution, other one smaller or equal
+    # max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    # max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
+    # print("maxs after rescaling", max_x, max_y)
 
     # # image dimensions are set to these new maximum x and y values ... before perspective projection
     # img = Image.new("RGBA",
@@ -293,36 +293,36 @@ def create_poly_image(polys: List[Polygon], ax, average_colors, max_resolution: 
 
     # calculates most extreme (highest absolute) value for all vector x and y angles
     all_verts = [a for b in [[vert for vert in face.vertices] for face in polys] for a in b]
-    angles_x = [[np.arctan((vert[x] - max_x/2) / vert[z]), idex, x] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
-    angles_y = [[np.arctan((vert[y] - max_y/2) / vert[z]), idex, y] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
-    min_an_x = min(angles_x, key=operator.itemgetter(0))
-    # min_an_x[0] = abs(min_an_x[0])
-    max_an_x = max(angles_x, key=operator.itemgetter(0))
-    min_an_y = min(angles_y, key=operator.itemgetter(0))
-    # min_an_y[0] = abs(min_an_y[0])
-    max_an_y = max(angles_y, key=operator.itemgetter(0))
-    print(f"fov: {fov} - minx: {math.degrees(min_an_x[0])} - miny: {math.degrees(min_an_y[0])} - maxx: {math.degrees(max_an_x[0])} - maxy: {math.degrees(max_an_y[0])}")
-
-    # determines shift required to display all projected vertices on image
-    max_idex =max((max_an_x, max_an_y, min_an_x, min_an_y), key=lambda x:abs(x[0]))
-    print("midex", max_idex, math.degrees(max_idex[0]))
-    shift = all_verts[max_idex[1]][max_idex[2]] / np.tan(math.radians(fov)) - all_verts[max_idex[1]][z]
+    # angles_x = [[np.arctan((vert[x] - max_x/2) / vert[z]), idex, x] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
+    # angles_y = [[np.arctan((vert[y] - max_y/2) / vert[z]), idex, y] for vert, idex in zip(all_verts, list(range(len(all_verts))))if vert[z] >= 1]
+    # min_an_x = min(angles_x, key=operator.itemgetter(0))
+    # # min_an_x[0] = abs(min_an_x[0])
+    # max_an_x = max(angles_x, key=operator.itemgetter(0))
+    # min_an_y = min(angles_y, key=operator.itemgetter(0))
+    # # min_an_y[0] = abs(min_an_y[0])
+    # max_an_y = max(angles_y, key=operator.itemgetter(0))
+    # print(f"fov: {fov} - minx: {math.degrees(min_an_x[0])} - miny: {math.degrees(min_an_y[0])} - maxx: {math.degrees(max_an_x[0])} - maxy: {math.degrees(max_an_y[0])}")
+    #
+    # # determines shift required to display all projected vertices on image
+    # max_idex =max((max_an_x, max_an_y, min_an_x, min_an_y), key=lambda x:abs(x[0]))
+    # print("midex", max_idex, math.degrees(max_idex[0]))
+    # shift = all_verts[max_idex[1]][max_idex[2]] / np.tan(math.radians(fov)) - all_verts[max_idex[1]][z]
     shifts = [(vert[x] / np.tan(math.radians(fov)) - vert[z],vert[y] / np.tan(math.radians(fov)) - vert[z]) for vert in all_verts]
     shift = max([a for b in shifts for a in b])
     shift = shift if shift > 0 else 0
     print("shift", shift)
-    print("test", math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/all_verts[min_an_x[1]][z])),
-          math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/(all_verts[min_an_x[1]][z]+shift))),
-          all_verts[min_an_x[1]])
-    print("test2", math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/all_verts[max_an_x[1]][z])),
-          math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/(all_verts[max_an_x[1]][z]+shift))),
-          all_verts[max_an_x[1]])
-    print("test3", math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/all_verts[min_an_y[1]][z])),
-          math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/(all_verts[min_an_y[1]][z]+shift))),
-          all_verts[min_an_y[1]])
-    print("test4", math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/all_verts[max_an_y[1]][z])),
-          math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/(all_verts[max_an_y[1]][z]+shift))),
-          all_verts[max_an_y[1]])
+    # print("test", math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/all_verts[min_an_x[1]][z])),
+    #       math.degrees(np.arctan(all_verts[min_an_x[1]][min_an_x[2]]/(all_verts[min_an_x[1]][z]+shift))),
+    #       all_verts[min_an_x[1]])
+    # print("test2", math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/all_verts[max_an_x[1]][z])),
+    #       math.degrees(np.arctan(all_verts[max_an_x[1]][max_an_x[2]]/(all_verts[max_an_x[1]][z]+shift))),
+    #       all_verts[max_an_x[1]])
+    # print("test3", math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/all_verts[min_an_y[1]][z])),
+    #       math.degrees(np.arctan(all_verts[min_an_y[1]][min_an_y[2]]/(all_verts[min_an_y[1]][z]+shift))),
+    #       all_verts[min_an_y[1]])
+    # print("test4", math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/all_verts[max_an_y[1]][z])),
+    #       math.degrees(np.arctan(all_verts[max_an_y[1]][max_an_y[2]]/(all_verts[max_an_y[1]][z]+shift))),
+    #       all_verts[max_an_y[1]])
 
     # shifts map far enough backward or forward to fill whole image ... doesnt work well yet
     # applies projection on x and y values

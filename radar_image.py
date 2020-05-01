@@ -30,11 +30,11 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
     # previous system caused mirroring, this one is based of front view (z vs x with depth=y)
     view_rotations = {
         "front": [0, 0, 0],
-        "right": [0, 0, 90],
+        "right": [0, 0, -90],
         "back": [0, 0, 180],
-        "left": [0, 0, 270],
-        "top": [0, 90, 90],
-        "bottom": [0, 270, 90],
+        "left": [0, 0, -270],
+        "top": [0, -90, -90],
+        "bottom": [0, -270, -90],
         "rotated": [x_an, y_an, z_an]
     }
     # checks if image_type is valid
@@ -44,19 +44,19 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
     if mode == 0:  # true color solid
         # load geometry and color information from bsp file
         polys, mean_colors = cl.get_polygons(path_to_pball + map_path, path_to_pball)
-        # if (image_type == "rotated" or image_type == "all") and not (x_an or y_an or z_an):
-        #     # get angles with maximum information aka faces are least stacked
-        #     # approach: for z rotation, get diagonal on xy plane and take its angle, for x rotation accordingly
-        #     # not working well yet, best for this would be a real 3d angle
-        #     max_x = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[0])
-        #     max_y = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[1])
-        #     max_z = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[2])
-        #     maxs = [max_x[0], max_y[1], max_z[2]]
-        #     # TODO: IDE complains about unexpected type (index after ["rotated"]
-        #     print(view_rotations["rotated"][0])
-        #     view_rotations["rotated"][2] = math.degrees(np.arctan(maxs[0] / maxs[1]))
-        #     view_rotations["rotated"][1] = math.degrees(np.arctan(maxs[0] / maxs[2]))
-        #     view_rotations["rotated"][0] = 0.0
+        if (image_type == "rotated" or image_type == "all") and not (x_an or y_an or z_an):
+            # get angles with maximum information aka faces are least stacked
+            # approach: for z rotation, get diagonal on xy plane and take its angle, for x rotation accordingly
+            # not working well yet, best for this would be a real 3d angle
+            max_x = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[0])
+            max_y = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[1])
+            max_z = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[2])
+            maxs = [max_x[0], max_y[1], max_z[2]]
+            # TODO: IDE complains about unexpected type (index after ["rotated"]
+            print(view_rotations["rotated"][0])
+            view_rotations["rotated"][2] = -math.degrees(np.arctan(maxs[0] / maxs[1]))
+            view_rotations["rotated"][1] = -math.degrees(np.arctan(maxs[0] / maxs[2]))
+            view_rotations["rotated"][0] = 0.0
         if image_type == "all":
             # render images and assign to a matplotlib axes, then save whole plot
             fig_solid, ((s_ax1, s_ax2), (s_ax3, s_ax4)) = plt.subplots(nrows=2, ncols=2)
