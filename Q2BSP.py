@@ -577,7 +577,6 @@ class Q2BSP:
         entity_lines = ["{"]
         for key, value in worldspawn.items():
             if key == "message" and not type(value) == str:
-                value = list(range(16,32))
                 value = "".join([x if type(x)==str else struct.pack("<B", x).decode("cp1252") for x in value])
             entity_lines.append(f'"{key}" "{value}"')
         entity_lines.append("}")
