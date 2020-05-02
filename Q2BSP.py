@@ -29,6 +29,16 @@ class point3s:
         return iter(astuple(self))
 
 
+@dataclass
+class RGBColor:
+    r: int
+    g: int
+    b: int
+
+    def __iter__(self):
+        return iter(astuple(self))
+
+
 def flatten(lis):
     for item in lis:
         if isinstance(item, Iterable) and not isinstance(item, str):
@@ -65,6 +75,7 @@ class Q2BSP:
             self.brushes = self.__get_brushes()
             self.is_vised = not len(self.binary_lumps[3]) == 0
             self.is_lit = not len(self.binary_lumps[7]) == 0
+            self.lightmaps = self.__get_lightmaps()
 
     def __get_header(self):
         magic = self.__bytes1[0:4].decode("ascii", "ignore")
@@ -119,6 +130,21 @@ class Q2BSP:
         for i in range(19):
             lump_list.append(self.__bytes1[self.lump_sizes[i].offset:self.lump_sizes[i].lump_end])
         return lump_list
+
+    def __get_lightmaps(self) -> List[RGBColor]:
+        lightmap: List[RGBColor] = list()
+        # print(len(self.binary_lumps[7])/3)
+        for i in range(int(len(self.binary_lumps[7])/3)):
+            lightmap.append(RGBColor(*struct.unpack("<BBB", self.binary_lumps[7][3*i:3*i+3])))
+        print("done")
+        # print("expected total offset, length:", self.lump_sizes[7].offset,self.lump_sizes[7].lump_end-self.lump_sizes[7].offset)
+        return lightmap
+
+    def save_lightmaps(self, lightmaps):
+        lightmap_bytes = b""
+        for lm in lightmaps:
+            lightmap_bytes += struct.pack("<BBB", *lm)
+        self.binary_lumps[7] = lightmap_bytes
 
     @dataclass
     class Plane:
@@ -394,7 +420,7 @@ class Q2BSP:
 
     class Face:
         def __init__(self, face_bytes):
-            self.original_bytes = face_bytes
+            # self.original_bytes = face_bytes
             (self.plane, self.plane_side) = struct.unpack("<HH", face_bytes[:4])
             self.first_edge = int.from_bytes(face_bytes[4:8], byteorder="little", signed=False)
             self.num_edges = int.from_bytes(face_bytes[8:10], byteorder="little", signed=False)
@@ -752,6 +778,7 @@ class Q2BSP:
         self.save_faces(self.faces)
         self.save_entities(self.worldspawn, self.entities)
         self.save_planes(self.planes)
+        # self.save_lightmaps(self.lightmaps)  # takes too much time, should only be executed when needed
         current_offset = 160  # 20*8+8
         for i in range(19):
             self.lump_sizes[self.lump_order[i]].length = len(self.binary_lumps[self.lump_order[i]])
