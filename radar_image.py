@@ -7,7 +7,8 @@ from PIL import Image
 import math
 
 def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, image_path: str, dpi: int = 1700,
-                 x_an: float = None, y_an: float = None, z_an: float = None, max_resolution: int = 2048) -> None:
+                 x_an: float = None, y_an: float = None, z_an: float = None, max_resolution: int = 2048,
+                 fov: int = 50) -> None:
     """
     root function for creating radar images
     :param mode: 0: colored solid, 1: heatmap solid, 2: heatmap wireframe
@@ -60,20 +61,21 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
         if image_type == "all":
             # render images and assign to a matplotlib axes, then save whole plot
             fig_solid, ((s_ax1, s_ax2), (s_ax3, s_ax4)) = plt.subplots(nrows=2, ncols=2)
-            fig_solid.suptitle(map_path.replace(".bsp", "").split("/")[len(map_path.split("/")) - 1] + " solid")
+            fig_solid.suptitle(map_path.replace(".bsp", "").split("/")[len(map_path.split("/")) - 1] +
+                               f"\n({'orthographic' if mode==1 else 'perspective'} projection)")
 
             poly_list = cl.get_rot_polys(polys, *view_rotations["front"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax1, mean_colors, mode == 0, max_resolution)
+            cl.create_poly_image(poly_list, s_ax1, mean_colors, mode == 0, max_resolution, fov)
             poly_list = cl.get_rot_polys(polys, *view_rotations["top"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax2, mean_colors, mode == 0, max_resolution)
+            cl.create_poly_image(poly_list, s_ax2, mean_colors, mode == 0, max_resolution, fov)
             poly_list = cl.get_rot_polys(polys, *view_rotations["right"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax3, mean_colors, mode == 0, max_resolution)
+            cl.create_poly_image(poly_list, s_ax3, mean_colors, mode == 0, max_resolution, fov)
             poly_list = cl.get_rot_polys(polys, *view_rotations["rotated"])  # x rot, roll/y rot, z rot
-            cl.create_poly_image(poly_list, s_ax4, mean_colors, mode == 0, max_resolution)
+            cl.create_poly_image(poly_list, s_ax4, mean_colors, mode == 0, max_resolution, fov)
             s_ax1.set_title("front view")
             s_ax2.set_title("top view")
             s_ax3.set_title("side view")
-            s_ax4.set_title("rotated view \n (orthographic)")
+            s_ax4.set_title(f"rotated view")
             fig_solid.show()
             fig_solid.savefig(image_path, dpi=dpi)
         else:
@@ -83,7 +85,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             #             [a for b in [[vert[2] for vert in fac.vertices] for fac in poly_rot] for a in b])
             # plt.show()
 
-            img = cl.create_poly_image(poly_rot, None, mean_colors, mode == 0, max_resolution)
+            img = cl.create_poly_image(poly_rot, None, mean_colors, mode == 0, max_resolution, fov)
             # img.thumbnail((512, 512), Image.ANTIALIAS)
             img.save(image_path)
     elif mode == 2:  # heatmap solid

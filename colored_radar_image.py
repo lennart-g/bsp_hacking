@@ -236,14 +236,15 @@ def get_rot_polys(polys: List[Polygon], x_angle: float, y_angle: float, z_angle:
     return faces
 
 
-def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[Tuple[int]], perspective: bool, max_resolution: int = 2048) -> Optional[
-    Image.Image]:
+def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[Tuple[int]], perspective: bool,
+                      max_resolution: int = 2048, fov: int = 50) -> Optional[Image.Image]:
     """
     Draws radar image and assigns it to axes or returns it
     :param polys:
     :param ax:
     :param average_colors:
     :param max_resolution:
+    :param fov:
     :return:
     """
     # y value will be the images x value and (max z value - z) will be images y value
@@ -257,9 +258,6 @@ def create_poly_image(polys: List[Polygon], ax: plt.axes, average_colors: List[T
     max_x = round(max([vert[x] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     max_y = round(max([vert[y] for vert in [a for b in [face.vertices for face in polys] for a in b]]))
     # print("maxs before rescaling", max_x, max_y)
-
-    # highest visible angle between camera / near plane normal and vertex
-    fov = 50
 
     # the view vector is the direction the camera is looking ... in orthographic projection
     view_vector = [0, 0, 0]
