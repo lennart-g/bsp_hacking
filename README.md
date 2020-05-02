@@ -1,16 +1,16 @@
-# BSP-Hacking
-Multiple Algorithms to change Quake 2 BSP files
+ # BSP-Hacking
+ Multiple Algorithms to change Quake 2 BSP files
 
-1. Q2BSP class
-2. Radar Image Generator
+ 1. Q2BSP class
+ 2. Radar Image Generator
 
-## Q2BSP class
-The Q2BSP class is still WIP but is built in a way that allows easily extending it. Also, for every information loaded,
-the class contains a method for converting it back to bytes and storing it in a new .bsp file.
+ ## Q2BSP class
+ The Q2BSP class is still WIP but is built in a way that allows easily extending it. Also, for every information loaded,
+ the class contains a method for converting it back to bytes and storing it in a new .bsp file.
 
-To load a map, use `my_map = Q2BSP("path/to/map.bsp")`
+ To load a map, use `my_map = Q2BSP("path/to/map.bsp")`
 
-Example for getting the game mode of a map and changing the loading message:
+ Example for getting the game mode of a map and changing the loading message:
      
  ```python
  game_mode = my_map.worldspawn["gamemode"]
@@ -20,16 +20,16 @@ Example for getting the game mode of a map and changing the loading message:
  my_map.save_map("path/to/map.bsp", "_mod")  # The new map will be saved as map_mod.bsp
 ```
 
-## Radar Image Generator
-The original purpose of this project was automatically generating a top view shot of maps that gives all
-the characteristic information an in-game screenshot would also provide (mostly surfaces colors and the
-map layout). In addition it now also supports rendering orthographic images at any given camera angle.
+ ## Radar Image Generator
+ The original purpose of this project was automatically generating a top view shot of maps that gives all
+ the characteristic information an in-game screenshot would also provide (mostly surfaces colors and the
+ map layout). In addition it now also supports rendering orthographic images at any given camera angle.
 
-The Radar Image Generator so far consists of four files: radar_image.py serves as the root file that will be called by
-the user. Colored_radar_image.py, wireframe_radar_image.py and heatmap_radar_image.py contain the functions required 
-to generate radar images. 
+ The Radar Image Generator so far consists of four files: radar_image.py serves as the root file that will be called by
+ the user. Colored_radar_image.py, wireframe_radar_image.py and heatmap_radar_image.py contain the functions required 
+ to generate radar images. 
  
-These three files will now be explained more in detail.
+ These three files will now be explained more in detail.
  
  ### perspective projection rendering (mode == 0)
  colored_radar_image.py contains the most recent functionality. One rendering mode it supports is perspective projection
