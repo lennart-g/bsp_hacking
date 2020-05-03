@@ -580,7 +580,7 @@ class Q2BSP:
                 entities.pop(idx)
                 break
 
-        if worldspawn["message"]:
+        if "message" in worldspawn:
             if not all(128 > ord(c) > 31 for c in worldspawn["message"]):
                 new_message = []
                 last_char = False
@@ -596,6 +596,8 @@ class Q2BSP:
                         last_char = False
                 print(new_message)
                 worldspawn["message"] = new_message
+        else:
+            print("Info: Map has no loading message set")
 
         return worldspawn, entities
 
