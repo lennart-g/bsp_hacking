@@ -90,7 +90,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
             img.save(image_path)
     elif mode == 2:  # heatmap solid
         polys, texture_ids, mean_colors = hm.get_polys(path_to_pball + map_path, path_to_pball)
-        poly_rot = hm.get_rot_polys(polys, 90, 0, 0) # fixed value rotation
+        poly_rot = hm.get_rot_polys(polys, 45, 0, 0) # fixed value rotation
         polys = hm.sort_by_z(polys)
         if image_type == "all":
             fig_solid, ((s_ax1, s_ax2), (s_ax3, s_ax4)) = hm.plt.subplots(nrows=2, ncols=2)
