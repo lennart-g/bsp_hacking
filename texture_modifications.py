@@ -11,6 +11,9 @@ def load_texture(pball_path: str, texture: str) -> Optional[Image.Image]:
     :param texture: texture name the way it is stored in the bsp file (relative to pball/textures and without extension)
     :return: RGBA Image object
     """
+    if not os.path.exists(pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1])):
+        print(f"Info: no such path {pball_path + '/textures/' + '/'.join(texture.lower().split('/')[:-1])}")
+        return
     # list of all files in stored subdirectory
     texture_options = os.listdir(pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1]))
     texture_path = ""
