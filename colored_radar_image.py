@@ -38,6 +38,12 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
     for texture in texture_list_cleaned:
         color = (0, 0, 0)
+        if not os.path.exists(pball_path+"/textures/"+"/".join(texture.lower().split("/")[:-1])):
+            print(f"Info: no such path {pball_path+'/textures/'+'/'.join(texture.lower().split('/')[:-1])}")
+            # sets (0,0,0) as default color for missing textures
+            average_colors.append((0,0,0))
+            continue
+
         # list of all files in stored subdirectory
         texture_options = os.listdir(pball_path+"/textures/"+"/".join(texture.lower().split("/")[:-1]))
         texture_path = ""
