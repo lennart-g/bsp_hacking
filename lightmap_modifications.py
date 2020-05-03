@@ -2,7 +2,7 @@ from Q2BSP import *
 import os
 
 
-def make_lightmap_grayscale(map_path: str) -> None:
+def make_lightmap_grayscale(map_path: str, affix: str) -> None:
     """
     Turns each lightmap texel into grayscale
     :param map_path: absolute path to map
@@ -14,4 +14,4 @@ def make_lightmap_grayscale(map_path: str) -> None:
     temp_map.worldspawn["message"] = map_path.split("/")[-1]+"\ngrayscale lightmap version"
     temp_map.save_lightmaps(temp_map.lightmaps)
     temp_map.update_lump_sizes()
-    temp_map.save_map(map_path, "_mod")
+    temp_map.save_map(map_path, "_" + affix)
