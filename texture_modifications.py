@@ -7,8 +7,8 @@ from Q2BSP import *
 def load_texture(pball_path: str, texture: str) -> Optional[Image.Image]:
     """
     Loads Image object based on texture name and subdir
-    :param pball_path:
-    :param texture:
+    :param pball_path: path to game media folder
+    :param texture: texture name the way it is stored in the bsp file (relative to pball/textures and without extension)
     :return: RGBA Image object
     """
     # list of all files in stored subdirectory
@@ -51,27 +51,35 @@ def load_texture(pball_path: str, texture: str) -> Optional[Image.Image]:
 def change_texture_paths(map_path: str, tex_dir: str, affix: str) -> List[str]:
     """
     changes stored image directory and adds prefix to stored texture name
-    :param map_path:
-    :param tex_dir:
-    :param affix:
-    :return:
+    :param map_path: absolute path to bsp file
+    :param tex_dir: subdirectory of modified texture copies
+    :param affix: prefix of new texture path
+    :return: yields all texture paths stored in the bsp file
     """
     temp_map = Q2BSP(map_path)
     for idx, tex_info in enumerate(temp_map.tex_infos):
         tex_name = tex_info.get_texture_name()
         temp_map.tex_infos[idx].set_texture_name(tex_dir + affix + "_" + tex_name.split("/")[-1])
         yield tex_name
-    print("test")
     temp_map.update_lump_sizes()
     temp_map.save_map(map_path, "_" + affix)
 
 
-def create_inverted_textures(pball_path, map_path, new_dir, affix):
+def create_inverted_textures(pball_path: str, map_path: str, new_dir: str, affix: str):
+    """
+    creates color inverted copy of all textures linked in the bsp file and creates map copy with edited texture links
+    :param pball_path: path to game media folder
+    :param map_path: relative to pball path, includes .bsp extension
+    :param new_dir: subdirectory for white texture in /textures/
+    :param affix: name for color inverted texture and for texture stored
+    :return: None
+    """
     textures = change_texture_paths(pball_path+map_path, new_dir, affix)
     for texture in textures:
         image = load_texture(pball_path, texture)
         if not image:
             continue
+        # don't invert alpha channel
         r, g, b, a = image.split()
         rgb_image = Image.merge('RGB', (r, g, b))
 
@@ -85,7 +93,15 @@ def create_inverted_textures(pball_path, map_path, new_dir, affix):
             pball_path +"/textures/"+ new_dir + affix + "_" + texture.split("/")[len(texture.split("/")) - 1] + ".png", "PNG")
 
 
-def create_uni_textures(pball_path, map_path, new_dir, affix):
+def create_monochrome_textures(pball_path: str, map_path: str, new_dir: str, affix: str) -> None:
+    """
+    creates monochrome 1×1 pixel copy of all textures linked in bsp and creates map copy with edited texture links
+    :param pball_path: path to game media folder
+    :param map_path: relative to pball path, includes .bsp extension
+    :param new_dir: subdirectory for white texture in /textures/
+    :param affix: name for monochrome texture and for texture stored
+    :return: None
+    """
     textures = change_texture_paths(pball_path+map_path, new_dir, affix)
     for texture in textures:
         image = load_texture(pball_path, texture)
@@ -96,7 +112,15 @@ def create_uni_textures(pball_path, map_path, new_dir, affix):
             pball_path +"/textures/"+ new_dir + affix + "_" + texture.split("/")[len(texture.split("/")) - 1] + ".png", "PNG")
 
 
-def create_grayscale_textures(pball_path, map_path, new_dir, affix):
+def create_grayscale_textures(pball_path: str, map_path: str, new_dir: str, affix: str) -> None:
+    """
+    creates grayscale versions of all textures linked in the bsp and creates map copy with edited texture links
+    :param pball_path: path to game media folder
+    :param map_path: relative to pball path, includes .bsp extension
+    :param new_dir: subdirectory for white texture in /textures/
+    :param affix: prefix for grayscale texture and for texture name stored in the bsp
+    :return: None
+    """
     textures = change_texture_paths(pball_path+map_path, new_dir, affix)
     for texture in textures:
         image = load_texture(pball_path, texture)
@@ -107,18 +131,39 @@ def create_grayscale_textures(pball_path, map_path, new_dir, affix):
             pball_path +"/textures/"+ new_dir + affix + "_" + texture.split("/")[len(texture.split("/")) - 1] + ".png", "PNG")
 
 
-def bsp_lightmap_only(pball_path, map_path, new_dir, affix):
+def bsp_lightmap_only(pball_path: str, map_path: str, new_dir: str, affix: str) -> None:
+    """
+    Assigns white texture to all faces so that face color solely depends on the lightmap
+    :param pball_path: path to game media folder
+    :param map_path: relative to pball path, includes .bsp extension
+    :param new_dir: subdirectory for white texture in /textures/
+    :param affix: name for white texture and for texture stored
+    :return: None
+    """
     temp_map = Q2BSP(pball_path+map_path)
+    # set all stored texture names to white texture path
     for idx, tex_info in enumerate(temp_map.tex_infos):
-        temp_map.tex_infos[idx].set_texture_name(new_dir + "white")
+        temp_map.tex_infos[idx].set_texture_name(new_dir + affix)
+    # save new bsp
     temp_map.update_lump_sizes()
     temp_map.save_map(pball_path+map_path, "_" + affix)
-    create_white_texture(pball_path + "/textures/" + new_dir, "white.png", 1)
+    # create white texture if it doesnt exist yet
+    create_white_texture(pball_path + "/textures/" + new_dir, affix + ".png", 1)
 
 
-def create_white_texture(path, name, size) -> None:
+def create_white_texture(path: str, name: str, size: int) -> None:
+    """
+    Creates white texture + specified subdirectory if they don't exist
+    :param path: absolute path
+    :param name: should start with "/" and contain file extension
+    :param size: width and height of square-shaped white texture
+    :return: None
+    """
+    # create subdirectory(/ies) if it doesn't exist
     if not os.path.exists(path):
         os.makedirs(path)
-    img = Image.new('RGB', (size, size), (255, 255, 255))
-    img.save(path+name, "PNG")
-    print(f"Created white texture of size {size}×{size}")
+    # create white image if no image with the specified path exists
+    if not os.path.exists(path+name):
+        img = Image.new('RGB', (size, size), (255, 255, 255))
+        img.save(path+name, "PNG")
+        print(f"Created white texture of size {size}×{size}")

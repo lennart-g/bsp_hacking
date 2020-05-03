@@ -133,11 +133,8 @@ class Q2BSP:
 
     def __get_lightmaps(self) -> List[RGBColor]:
         lightmap: List[RGBColor] = list()
-        # print(len(self.binary_lumps[7])/3)
         for i in range(int(len(self.binary_lumps[7])/3)):
             lightmap.append(RGBColor(*struct.unpack("<BBB", self.binary_lumps[7][3*i:3*i+3])))
-        print("done")
-        # print("expected total offset, length:", self.lump_sizes[7].offset,self.lump_sizes[7].lump_end-self.lump_sizes[7].offset)
         return lightmap
 
     def save_lightmaps(self, lightmaps):
@@ -169,7 +166,6 @@ class Q2BSP:
         for plane in planes:
             plane_values = list(flatten(list(plane)))
             planes_bytes += struct.pack("<ffffI", *plane_values)
-        # print(planes_bytes)
         self.binary_lumps[1] = planes_bytes
 
     def __get_vertices(self):
