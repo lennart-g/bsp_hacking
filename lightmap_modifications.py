@@ -2,7 +2,12 @@ from Q2BSP import *
 import os
 
 
-def make_lightmap_grayscale(map_path: str):
+def make_lightmap_grayscale(map_path: str) -> None:
+    """
+    Turns each lightmap texel into grayscale
+    :param map_path: absolute path to map
+    :return: None
+    """
     temp_map = Q2BSP(map_path)
     for idx, color in enumerate(temp_map.lightmaps):
         temp_map.lightmaps[idx] = RGBColor(*[int(0.2989*color.r + 0.5870*color.g + 0.1140*color.b)]*3)
