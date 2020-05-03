@@ -9,7 +9,7 @@ scale is used.
 
 ![Image of wireframe mode](../imgs/siegecastle_hmwf.png)
 
-To render the image above, run `create_image(pball_path, "/maps/siegecastle,bsp", "all", 3, "mode3.png", max_resolution=1024, x_an=0.0, y_an=0.0, z_an=0.0)
+To render the image above, run `create_image(pball_path, "/maps/siegecastle.bsp", "all", 3, "mode3.png", max_resolution=1024, x_an=0.0, y_an=0.0, z_an=0.0)
 `
 
 ## 2-3. Semi-transparent face rendering
