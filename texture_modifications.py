@@ -1,6 +1,6 @@
-from PIL import Image, WalImageFile, ImageOps
 import os
 from typing import Optional
+from PIL import WalImageFile, ImageOps
 from Q2BSP import *
 
 

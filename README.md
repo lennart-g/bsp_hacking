@@ -14,7 +14,7 @@ For every lump that can be loaded and that does not need
 a compiler for exporting, the class also contains 
 methods for saving it in a valid Quake 2 BSP file.
 
-## Custom software renderer
+## [Custom software renderer](docs/renderer.md)
 ![Whole-map rendering](imgs/stack_perspective.png)
 The original goal of this sub-project was writing
 a simple renderer for radar images (top-down views
@@ -30,7 +30,7 @@ real-time rendering.
 
 ![Rendering from player perspective](imgs/pp1_player_perspective.png)
 
-## Modifying BSP Files
+## [Modifying BSP Files](docs/modifying.md)
 ![In-game screenshot of monochrome textures](imgs/monochrome_textures.jpg)
 Intention of this sub-project was finding various ways of editing BSP files that
 don't require recompiling them. This includes surface specific flags like transparency,
