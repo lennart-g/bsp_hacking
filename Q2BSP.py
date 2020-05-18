@@ -538,36 +538,76 @@ class Q2BSP:
     def __get_entities(self):
         entities = list()
         # print(chr(*struct.unpack("<I", b"0x88")))
+        raw_entity_bytes = bytearray(self.binary_lumps[0])
+        raw_entity_bytes = raw_entity_bytes.rstrip(b"\x00")
 
-        raw_entity_lines = bytearray(self.binary_lumps[0]).decode("cp1252")
-        # print(raw_entity_lines)
-        entity_lines = raw_entity_lines.rstrip("\x00")
-        # print(entity_lines.split("\n"))
         current_entity = {}
-        entity_lines = entity_lines.split("\n")
-        # entity_lines = [x.lstrip() for x in entity_lines if x.lstrip]
-        # for idx,line in enumerate(entity_lines):
-        #     print(idx,line)
-        for idx, line in enumerate(entity_lines):
-            # print(line)
-            if line.endswith("}"):
+
+        for line in raw_entity_bytes.split(b"\n"):
+            # line ending with } ends an entity block
+            if line.endswith(b"}"):
                 entities.append(current_entity)
                 current_entity = {}
                 continue
+            # lines being { start one but dont contain other information
             if line == "{":
                 continue
-            if line.startswith("{"):
-                line = line.replace("{", "")
+            # lines starting with { start entity and contain further information
+            if line.startswith(b"{"):
+                line = line.replace(b"{", b"")
 
-            if line.strip():
-                key_value = re.findall('"([^"]*)"', line)
-                # print(idx, line, key_value)
+            if line.rstrip():
+                if b"message" in line:
+                    print(line)
+                try:
+                    line = line.decode("ascii")
+                    key_value = re.findall('"([^"]*)"', line)
+                except UnicodeDecodeError:
+                    key_value = re.findall(b'"([^"]*)"', line)
+                    try:
+                        key_value[0] = key_value[0].decode("ascii")
+                    except UnicodeDecodeError:
+                        pass
+                # print(key_value)
                 if key_value[0] in current_entity.keys():
                     print("Entity Error: multiple values for one key", key_value)
                 if not key_value[0] in current_entity.keys():
                     current_entity[key_value[0]] = key_value[1]
                 if not len(key_value):
                     print("Entity Error:", key_value)
+
+            # print(line)
+
+        # raw_entity_lines = raw_entity_bytes.decode("cp1252")
+        #
+        # # print(raw_entity_lines)
+        # entity_lines = raw_entity_lines.rstrip("\x00")
+        # # print(entity_lines.split("\n"))
+        # current_entity = {}
+        # entity_lines = entity_lines.split("\n")
+        # # entity_lines = [x.lstrip() for x in entity_lines if x.lstrip]
+        # # for idx,line in enumerate(entity_lines):
+        # #     print(idx,line)
+        # for idx, line in enumerate(entity_lines):
+        #     # print(line)
+        #     if line.endswith("}"):
+        #         entities.append(current_entity)
+        #         current_entity = {}
+        #         continue
+        #     if line == "{":
+        #         continue
+        #     if line.startswith("{"):
+        #         line = line.replace("{", "")
+        #
+        #     if line.strip():
+        #         key_value = re.findall('"([^"]*)"', line)
+        #         # print(idx, line, key_value)
+        #         if key_value[0] in current_entity.keys():
+        #             print("Entity Error: multiple values for one key", key_value)
+        #         if not key_value[0] in current_entity.keys():
+        #             current_entity[key_value[0]] = key_value[1]
+        #         if not len(key_value):
+        #             print("Entity Error:", key_value)
         # print("old entitity length", len(raw_entity_lines))
         worldspawn = {}
         for idx, entity in enumerate(entities):
@@ -577,18 +617,22 @@ class Q2BSP:
                 break
 
         if "message" in worldspawn:
-            if not all(128 > ord(c) > 31 for c in worldspawn["message"]):
+            # if not all(128 > ord(c) > 31 for c in worldspawn["message"]):
+            if not type(worldspawn["message"])==str:
                 new_message = []
                 last_char = False
                 for char in worldspawn["message"]:
-                    if 128 > ord(char) > 31:
+
+                    if 128 > char > 31:
+                        # print(char)
                         if last_char:
-                            new_message[-1] += char
+                            new_message[-1] += chr(char)
                         else:
-                            new_message.append(char)
+                            new_message.append(chr(char))
                         last_char = True
                     else:
-                        new_message.append(*struct.unpack("<B", char.encode("cp1252")))
+                        # print(char)
+                        new_message.append(char)
                         last_char = False
                 print(new_message)
                 worldspawn["message"] = new_message
@@ -598,21 +642,38 @@ class Q2BSP:
         return worldspawn, entities
 
     def save_entities(self, worldspawn, entities):
-        entity_lines = ["{"]
+        # print(worldspawn["message"])
+        entity_lines = [b"{"]
         for key, value in worldspawn.items():
             if key == "message" and not type(value) == str:
-                value = "".join([x if type(x)==str else struct.pack("<B", x).decode("cp1252") for x in value])
-            entity_lines.append(f'"{key}" "{value}"')
-        entity_lines.append("}")
+                # print(value)
+                # value = "".join([x if type(x)==str else chr(x) for x in value])
+                # local_bytes = b""
+                # for x in value:
+                #     try:
+                #         local_bytes += bytes([ord(x)])
+                #     except TypeError:
+                #         print(x)
+                # print(local_bytes)
+                value = b"".join([x.encode("ascii") if type(x)==str else bytes([x]) for x in value])
+                print(f'"{key}" "'.encode("ascii")+ value+ '"'.encode("ascii"))
+                entity_lines.append(f'"{key}" "'.encode("ascii")+ value+ '"'.encode("ascii"))
+            else:
+                # print([x.encode("ascii") for x in value])
+                # print([type(x) for x in value])
+                entity_lines.append(f'"{key}" "{value}"'.encode("ascii"))
+        entity_lines.append(b"}")
+        print(entity_lines)
         for entity in entities:
-            entity_lines.append("{")
+            entity_lines.append(b"{")
             for key, value in entity.items():
-                entity_lines.append(f'"{key}" "{value}"')
-            entity_lines.append("}")
+                entity_lines.append(f'"{key}" "{value}"'.encode("ascii"))
+            entity_lines.append(b"}")
         # print(entity_lines)
-        entity_lines = "\n".join(entity_lines) + "\n\x00"
-        entity_bytes = entity_lines.encode("cp1252")
-        self.binary_lumps[0] = entity_bytes
+        entity_lines = b"\n".join(entity_lines) + b"\n\x00"
+        print(entity_lines)
+        # entity_bytes = entity_lines.encode("ascii")
+        self.binary_lumps[0] = entity_lines
 
     class Model:
         def __init__(self, model_bytes):
