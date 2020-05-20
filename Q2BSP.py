@@ -542,8 +542,8 @@ class Q2BSP:
         raw_entity_bytes = raw_entity_bytes.rstrip(b"\x00")
 
         current_entity = {}
-
-        for line in raw_entity_bytes.split(b"\n"):
+        # print(raw_entity_bytes.split(b"\n"))
+        for line in raw_entity_bytes.splitlines():
             # line ending with } ends an entity block
             if line.endswith(b"}"):
                 entities.append(current_entity)
@@ -557,6 +557,7 @@ class Q2BSP:
                 line = line.replace(b"{", b"")
 
             if line.rstrip():
+                # print(line)
                 if b"message" in line:
                     print(line)
                 try:
@@ -610,11 +611,13 @@ class Q2BSP:
         #             print("Entity Error:", key_value)
         # print("old entitity length", len(raw_entity_lines))
         worldspawn = {}
+        print(entities)
         for idx, entity in enumerate(entities):
-            if entity["classname"] == "worldspawn":
-                worldspawn = entity
-                entities.pop(idx)
-                break
+            if "classname" in entity.keys():
+                if entity["classname"] == "worldspawn":
+                    worldspawn = entity
+                    entities.pop(idx)
+                    break
 
         if "message" in worldspawn:
             # if not all(128 > ord(c) > 31 for c in worldspawn["message"]):
