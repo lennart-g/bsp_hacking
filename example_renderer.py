@@ -1,7 +1,5 @@
-from radar_image import create_image
-
 import os
-print(os.getcwd())
+from radar_image import create_image
 
 
 pball_path = os.path.abspath('./pball')
