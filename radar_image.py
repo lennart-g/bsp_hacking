@@ -45,7 +45,7 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
     if mode == 0 or mode==1:  # true color solid
         # load geometry and color information from bsp file
         polys, mean_colors = cl.get_polygons(path_to_pball + map_path, path_to_pball)
-        if (image_type == "rotated" or image_type == "all") and not (x_an or y_an or z_an):
+        if (image_type == "rotated" or image_type == "all") and (x_an is None or y_an is None or z_an is None):
             # get angles with maximum information aka faces are least stacked
             # approach: for z rotation, get diagonal on xy plane and take its angle, for x rotation accordingly
             # not working well yet, best for this would be a real 3d angle
