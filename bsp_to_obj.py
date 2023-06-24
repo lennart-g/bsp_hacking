@@ -19,7 +19,8 @@ def obj_from_bsp(bsp_path='beta/oddball_b1.bsp', pball_path='./pball'):
         for v in poly.vertices:
             vertex_count += 1
             tmp_faces.append(vertex_count)
-            line = f'v {v[0]:.4f} {v[1]:.4f} {v[2]:.4f}\n'
+            v = [x/1000 for x in v]
+            line = f'v {v[0]:.4f} {v[2]:.4f} {v[1]:.4f}\n'
             obj_file += line
 
         faces.append(tmp_faces)
