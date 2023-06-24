@@ -1,5 +1,5 @@
 # BSP-Hacking
-Written for Python3.8
+Written for Python3.10
 
 Multiple algorithms around loading and modifying 
 Quake 2 BSP Files

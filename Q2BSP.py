@@ -6,7 +6,7 @@ from statistics import mean
 import re
 from dataclasses import dataclass, astuple
 from typing import Tuple, List, Dict, NamedTuple
-from collections import Iterable
+from collections.abc import Iterable
 
 
 @dataclass
