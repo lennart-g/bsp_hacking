@@ -6,6 +6,23 @@ import numpy as np
 from PIL import Image
 import math
 
+
+def get_optimal_angle(polys):
+    # get angles with maximum information aka faces are least stacked
+    # approach: for z rotation, get diagonal on xy plane and take its angle, for x rotation accordingly
+    # not working well yet, best for this would be a real 3d angle
+    max_x = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[0])
+    max_y = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[1])
+    max_z = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[2])
+    maxs = [max_x[0], max_y[1], max_z[2]]
+
+    z_angle = -math.degrees(np.arctan(maxs[0] / maxs[1]))
+    y_angle = -math.degrees(np.arctan(maxs[0] / maxs[2]))
+    x_angle = 0.0
+
+    return x_angle, y_angle, z_angle
+
+
 def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, image_path: str, dpi: int = 1700,
                  x_an: float = None, y_an: float = None, z_an: float = None, max_resolution: int = 2048,
                  fov: int = 50) -> None:
@@ -42,22 +59,11 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
     if image_type not in image_types_axes.keys() and image_type not in view_rotations.keys():
         print("Error: No such image type", image_type, "\n pick one of ", *image_types_axes.keys())
         return
-    if mode == 0 or mode==1:  # true color solid
+    if mode == 0 or mode == 1:  # true color solid
         # load geometry and color information from bsp file
         polys, mean_colors = cl.get_polygons(path_to_pball + map_path, path_to_pball)
-        if (image_type == "rotated" or image_type == "all") and not (x_an or y_an or z_an):
-            # get angles with maximum information aka faces are least stacked
-            # approach: for z rotation, get diagonal on xy plane and take its angle, for x rotation accordingly
-            # not working well yet, best for this would be a real 3d angle
-            max_x = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[0])
-            max_y = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[1])
-            max_z = max([a for b in [x.vertices for x in polys] for a in b], key=lambda x: x[2])
-            maxs = [max_x[0], max_y[1], max_z[2]]
-            # TODO: IDE complains about unexpected type (index after ["rotated"]
-            print(view_rotations["rotated"][0])
-            view_rotations["rotated"][2] = -math.degrees(np.arctan(maxs[0] / maxs[1]))
-            view_rotations["rotated"][1] = -math.degrees(np.arctan(maxs[0] / maxs[2]))
-            view_rotations["rotated"][0] = 0.0
+        if (image_type == "rotated" or image_type == "all") and (x_an is None or y_an is None or z_an is None):
+            view_rotations["rotated"] = get_optimal_angle(polys)
         if image_type == "all":
             # render images and assign to a matplotlib axes, then save whole plot
             fig_solid, ((s_ax1, s_ax2), (s_ax3, s_ax4)) = plt.subplots(nrows=2, ncols=2)
@@ -81,12 +87,8 @@ def create_image(path_to_pball: str, map_path: str, image_type: str, mode: int, 
         else:
             # rotate polys and draw
             poly_rot = cl.get_rot_polys(polys, *view_rotations[image_type])
-            # plt.scatter([a for b in [[vert[1] for vert in fac.vertices] for fac in poly_rot] for a in b],
-            #             [a for b in [[vert[2] for vert in fac.vertices] for fac in poly_rot] for a in b])
-            # plt.show()
 
             img = cl.create_poly_image(poly_rot, None, mean_colors, mode == 0, max_resolution, fov)
-            # img.thumbnail((512, 512), Image.ANTIALIAS)
             img.save(image_path)
     elif mode == 2:  # heatmap solid
         polys, texture_ids, mean_colors = hm.get_polys(path_to_pball + map_path, path_to_pball)
