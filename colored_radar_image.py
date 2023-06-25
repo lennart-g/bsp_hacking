@@ -23,7 +23,8 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     Calculates mean color of all used textures and builds list of all unique colors
     :param path: full path to map
     :param pball_path: path to pball / game media directory, needed to get full texture path
-    :return: list of Polygon objects, list of RGB colors
+    :return: list of Polygon objects, list of RGB colors (in the case of a face normally not rendered in the game, e.g.
+     a clip brush, the color is (0,0,0,0))
     """
     # instead of directly reading all information from file, the Q2BSP class is used for reading
     temp_map = Q2BSP(path)
