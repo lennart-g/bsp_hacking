@@ -40,6 +40,8 @@ def obj_from_bsp(bsp_path='beta/oddball_b1.bsp', pball_path='./pball'):
 
         faces.append({'verts': tmp_faces, 'tex_id': poly.tex_id})
     # save each face as indices to the vertices
+    color_indices = []
+
     for face in faces:
         verts = face['verts']
         for i in range(len(verts) - 2):
@@ -47,22 +49,34 @@ def obj_from_bsp(bsp_path='beta/oddball_b1.bsp', pball_path='./pball'):
             line += f'{verts[0]} {verts[i+1]} {verts[i+2]}'
             line += '\n'
             face_lines.append(line)
+            color_indices.append(face['tex_id'])
 
-            line = '# '
-            line += ' '.join([str(x) for x in colors[face['tex_id']]])
-            line += '\n'
-            color_lines.append(line)
+            # line = '# '
+            # line += ' '.join([str(x) for x in colors[face['tex_id']]])
+            # line += '\n'
+            # color_lines.append(line)
+
+    for color in colors:
+        line = '# '
+        line += ' '.join([str(x) for x in color])
+        line += '\n'
+        color_lines.append(line)
+    color_index_line = '# '
+    color_index_line += ' '.join([str(x) for x in color_indices])
+    color_index_line += '\n'
 
     obj_file += ''.join(vertex_lines)
     obj_file += ''.join(face_lines)
     obj_file += ''.join(color_lines)
+    obj_file += color_index_line
 
     print(f'vertex lines: {len(vertex_lines)}')
     print(f'face lines: {len(face_lines)}')
-    print(f'color lines: {len(color_lines)}')
+    print(f'color lines: {len(color_indices)}')
+    print(f'color indices: {len(color_indices)}')
     return obj_file
 
 out = obj_from_bsp()
 
-with open('/home/lennart/Downloads/test6.obj', 'w') as f:
+with open('/home/lennart/Downloads/test7.obj', 'w') as f:
     f.write(out)
