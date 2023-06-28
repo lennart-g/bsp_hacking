@@ -1,12 +1,15 @@
 import copy
 import os
+import warnings
 from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import WalImageFile
 
 from Q2BSP import *
+from util.bsp_util import get_faces_from_vertices, get_normals, get_unique_texture_names
+from util.geometry import normalize_faces
+from util.texture_util import get_average_color
 
 
 @dataclass
@@ -21,39 +24,71 @@ class Polygon:
 
 def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[int]]]:
     """
-    Converts information from Q2BSP object into List of Polygon objects
-    Calculates mean color of all used textures and builds list of all unique colors
+    Converts information from Q2BSP object into List of Polygon objects Calculates mean color of
+    all used textures and builds list of all unique colors
     :param path: full path to map
     :param pball_path: path to pball / game media directory, needed to get full texture path
-    :return: list of Polygon objects, list of RGB colors (in the case of a face normally not rendered in the game, e.g.
-     a clip brush, the color is (0,0,0,0))
+    :return: list of Polygon objects, list of RGB colors (in the case of a face normally not
+    rendered in the game, e.g. a clip brush, the color is (0,0,0,0))
     """
     # instead of directly reading all information from file, the Q2BSP class is used for reading
     temp_map = Q2BSP(path)
 
-    # get a list of unique texture names (which are stored without an extension -> multiple ones must be tested)
-    texture_list = [x.get_texture_name() for x in temp_map.tex_infos]
-    texture_list_cleaned = list(dict.fromkeys(texture_list))
-    # iterate through texture list, look which one exists, load, rescale to 1×1 pixel = color is mean color
-    average_colors = list()
-    skip_faces = list()
+    # get a list of unique texture names (which are stored without an extension -> multiple ones
+    # must be tested)
+    textures, unique_textures = get_unique_texture_names(temp_map)
+    # iterate through texture list, look which one exists, load, rescale to 1×1 pixel = color is
+    # mean color
+    average_colors = get_average_colors(pball_path, unique_textures)
 
+    # instead of storing face color directly in the Polygon object, store an index so that you
+    # can easily change one color for all faces using the same one
+    tex_indices = [x.texture_info for x in temp_map.faces]
+    tex_ids = [unique_textures.index(textures[tex_index]) for tex_index in tex_indices]
+
+    # each face is a list of vertices stored as Tuples
+    faces, skip_surfaces = get_faces_from_vertices(temp_map)
+
+    # get minimal of all x y and z values and move all vertices so they all have coordinate
+    # values >= 0
+    polys_normalized = normalize_faces(faces)
+
+    normals = get_normals(temp_map)
+
+    # construct polygon list out of the faces, indices into unique textures aka colors (two
+    # different textures could have the same mean color), normals
+    polygons: List[Polygon] = list()
+    for idx, poly in enumerate(polys_normalized):
+        polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
+        polygons.append(polygon)
+
+    print(skip_surfaces, "skip")
+    for i in skip_surfaces[::-1]:
+        polygons.pop(i)
+
+    return polygons, average_colors
+
+
+def get_average_colors(pball_path, texture_list_cleaned):
+    average_colors = list()
     for texture in texture_list_cleaned:
         color = (0, 0, 0)
         if not os.path.exists(
             pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1])
         ):
-            print(
-                f"Info: no such path {pball_path+'/textures/'+'/'.join(texture.lower().split('/')[:-1])}"
+            warnings.warn(
+                f"No such path {pball_path + '/textures/' + '/'.join(texture.lower().split('/')[:-1])}. Defaulting average color to {color} "
             )
-            # sets (0,0,0) as default color for missing textures
-            average_colors.append((0, 0, 0))
+
+            # set default color for missing textures
+            average_colors.append(color)
             continue
 
         # list of all files in stored subdirectory
         texture_options = os.listdir(
             pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1])
         )
+
         texture_path = ""
         # iterate through texture options until one name matches stored texture name
         for idx, tex_option in enumerate(texture_options):
@@ -69,33 +104,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
             average_colors.append((0, 0, 0))
             continue
 
-        if os.path.splitext(texture_path)[1] in [".png", ".jpg", ".tga"]:
-            img = Image.open(pball_path + "/textures/" + texture_path)
-            img2 = img.resize((1, 1))
-            img2 = img2.convert("RGBA")
-            img2 = img2.load()
-            color = img2[0, 0]
-
-        elif os.path.splitext(texture_path)[1] == ".wal":
-            # wal files are 8 bit and require a palette
-            with open("pb2e.pal", "r") as pal:
-                conts = pal.read().split("\n")[3:]
-                conts = [b.split(" ") for b in conts]
-                conts = [c for b in conts for c in b]
-                conts.pop(len(conts) - 1)
-                conts = list(map(int, conts))
-                img3 = WalImageFile.open(pball_path + "/textures/" + texture_path)
-                img3.putpalette(conts)
-                img3 = img3.convert("RGBA")
-
-                img2 = img3.resize((1, 1))
-
-                color = img2.getpixel((0, 0))
-        else:
-            print(
-                f"Error: unsupported format {os.path.splitext(texture_path)[1]} in {texture_path}"
-                f"\nsupported formats are .png, .jpg, .tga, .wal"
-            )
+        color = get_average_color(pball_path + "/textures/" + texture_path)
 
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
@@ -106,74 +115,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
             print(texture)
             color_rgb = (0, 0, 0, 0)  # actually rgba
         average_colors.append(color_rgb)
-
-    # instead of storing face color directly in the Polygon object, store an index so that you can easily change one
-    # color for all faces using the same one
-    tex_indices = [x.texture_info for x in temp_map.faces]
-    tex_ids = [
-        texture_list_cleaned.index(texture_list[tex_index]) for tex_index in tex_indices
-    ]
-
-    # each face is a list of vertices stored as Tuples
-    faces: List[List[Tuple]] = list()
-    skip_surfaces = []
-    for idx, face in enumerate(temp_map.faces):
-        flags = temp_map.tex_infos[face.texture_info].flags
-        if flags.hint or flags.nodraw or flags.sky or flags.skip:
-            skip_surfaces.append(idx)
-        current_face: List[Tuple] = list()
-        for i in range(face.num_edges):
-            face_edge = temp_map.face_edges[face.first_edge + i]
-            if face_edge > 0:
-                edge = temp_map.edge_list[face_edge]
-            else:
-                edge = temp_map.edge_list[abs(face_edge)][::-1]
-            for vert in edge:
-                if not temp_map.vertices[vert] in current_face:
-                    current_face.append(temp_map.vertices[vert])
-        faces.append(current_face)
-
-    # get minimal of all x y and z values and move all vertices so they all have coordinate values >= 0
-    min_x = min([a[0] for b in faces for a in b])
-    min_y = min([a[1] for b in faces for a in b])
-    min_z = min([a[2] for b in faces for a in b])
-
-    polys_normalized = [
-        [[vertex[0] - min_x, vertex[1] - min_y, vertex[2] - min_z] for vertex in edge]
-        for edge in faces
-    ]
-
-    # get normals out of the Q2BSP object, if face.plane_side != 0, flip it (invert signs of coordinates)
-    normal_list = [x.normal for x in temp_map.planes]
-    normals = list()
-    for face in temp_map.faces:
-        # print(temp_map.tex_infos[face.texture_info].flags)
-        if not face.plane_side == 0:
-            # -1*0.0 returns -0.0 which is prevented by this expression
-            # TODO: Does -0.0 do any harm here?
-            normal = [-1 * x if not x == 0.0 else x for x in normal_list[face.plane]]
-        else:
-            normal = list(normal_list[face.plane])
-        normals.append(normal)
-
-    # construct polygon list out of the faces, indices into unique textures aka colors (two different textures could
-    # have the same mean color), normals
-    polygons: List[Polygon] = list()
-    for idx, poly in enumerate(polys_normalized):
-        polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
-        polygons.append(polygon)
-
-    print(skip_surfaces, "skip")
-    for i in skip_surfaces[::-1]:
-        polygons.pop(i)
-
-    # for idx, poly in enumerate(polygons):
-    #     print(average_colors[poly.tex_id])
-    #     if average_colors[poly.tex_id] == (0,0,0,0):
-    #         print("here")
-    #         polygons.pop(len(polygons)-1-idx)
-
-    return polygons, average_colors
+    return average_colors
 
 
 def sort_by_axis(faces: List[Polygon], axis: int) -> List[Polygon]:
