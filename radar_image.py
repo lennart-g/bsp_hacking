@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
+from plots.plot_poly_image import cl_create_poly_image, cl_get_rot_polys
 import colored_radar_image as cl
 import heatmap_radar_image as hm
 import wireframe_radar_image as wf
@@ -96,28 +97,28 @@ def create_image(
                 + f"\n({'orthographic' if mode==1 else 'perspective'} projection)"
             )
 
-            poly_list = cl.get_rot_polys(
+            poly_list = cl_get_rot_polys(
                 polys, *view_rotations["front"]
             )  # x rot, roll/y rot, z rot
-            cl.create_poly_image(
+            cl_create_poly_image(
                 poly_list, s_ax1, mean_colors, mode == 0, max_resolution, fov
             )
-            poly_list = cl.get_rot_polys(
+            poly_list = cl_get_rot_polys(
                 polys, *view_rotations["top"]
             )  # x rot, roll/y rot, z rot
-            cl.create_poly_image(
+            cl_create_poly_image(
                 poly_list, s_ax2, mean_colors, mode == 0, max_resolution, fov
             )
-            poly_list = cl.get_rot_polys(
+            poly_list = cl_get_rot_polys(
                 polys, *view_rotations["right"]
             )  # x rot, roll/y rot, z rot
-            cl.create_poly_image(
+            cl_create_poly_image(
                 poly_list, s_ax3, mean_colors, mode == 0, max_resolution, fov
             )
-            poly_list = cl.get_rot_polys(
+            poly_list = cl_get_rot_polys(
                 polys, *view_rotations["rotated"]
             )  # x rot, roll/y rot, z rot
-            cl.create_poly_image(
+            cl_create_poly_image(
                 poly_list, s_ax4, mean_colors, mode == 0, max_resolution, fov
             )
             s_ax1.set_title("front view")
@@ -128,9 +129,9 @@ def create_image(
             fig_solid.savefig(image_path, dpi=dpi)
         else:
             # rotate polys and draw
-            poly_rot = cl.get_rot_polys(polys, *view_rotations[image_type])
+            poly_rot = cl_get_rot_polys(polys, *view_rotations[image_type])
 
-            img = cl.create_poly_image(
+            img = cl_create_poly_image(
                 poly_rot, None, mean_colors, mode == 0, max_resolution, fov
             )
             img.save(image_path)

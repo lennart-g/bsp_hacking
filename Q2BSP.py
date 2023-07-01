@@ -1,13 +1,10 @@
-import math
 import operator
 import re
 import struct
 from collections.abc import Iterable
 from dataclasses import astuple, dataclass
 from statistics import mean
-from typing import Dict, List, NamedTuple, Tuple
-
-from PIL import Image, ImageDraw, ImageFont
+from typing import List, Tuple
 
 
 @dataclass

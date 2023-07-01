@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from bsp_hacking.Q2BSP import Q2BSP, point3f
+from Q2BSP import Q2BSP, point3f
 
 
 def get_normals(temp_map: Q2BSP) -> List[List[float]]:
