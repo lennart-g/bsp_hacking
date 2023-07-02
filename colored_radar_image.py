@@ -2,7 +2,7 @@ import copy
 import os
 import warnings
 from typing import Optional
-
+import logging
 
 from Q2BSP import *
 from util.bsp_util import get_faces_from_vertices, get_normals, get_unique_texture_names
@@ -86,6 +86,7 @@ def get_average_colors(pball_path, texture_list_cleaned):
         texture_options = os.listdir(
             pball_path + "/textures/" + "/".join(texture.lower().split("/")[:-1])
         )
+        texture_options = [x for x in texture_options if os.path.splitext(x)[-1] in ('.jpg', '.png', '.tga', '.wal')]
 
         texture_path = ""
         # iterate through texture options until one name matches stored texture name
@@ -102,7 +103,12 @@ def get_average_colors(pball_path, texture_list_cleaned):
             average_colors.append((0, 0, 0))
             continue
 
-        color = get_average_color(pball_path + "/textures/" + texture_path)
+        try:
+            color = get_average_color(pball_path + "/textures/" + texture_path)
+        except ValueError as e:
+            logging.warning('Captured exception in get_average_color: ' + str(e))
+        except Exception as e:
+            logging.error('Unexpected error in get_average_color: ' + str(e))
 
         color_rgb = color[:3]
         if color_rgb == (0, 0, 0):
@@ -116,5 +122,5 @@ def get_average_colors(pball_path, texture_list_cleaned):
     return average_colors
 
 
-
-
+if __name__ == '__main__':
+    get_polygons("./pball/maps/beta/oddball_b1.bsp", "./pball")

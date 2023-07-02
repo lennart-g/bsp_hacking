@@ -8,6 +8,7 @@ from colored_radar_image import Polygon
 from statistics import mean
 import operator
 
+
 def cl_create_poly_image(
     polys: List[Polygon],
     ax: plt.axes,

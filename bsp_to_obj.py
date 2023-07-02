@@ -86,3 +86,7 @@ def obj_from_bsp(
     print(f"color lines: {len(color_indices)}")
     print(f"color indices: {len(color_indices)}")
     return obj_file
+
+
+if __name__ == '__main__':
+    obj_from_bsp()
