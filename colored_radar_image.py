@@ -53,13 +53,11 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # values >= 0
     polys_normalized = normalize_faces(faces)
 
-    normals = get_normals(temp_map)
-
     # construct polygon list out of the faces, indices into unique textures aka colors (two
     # different textures could have the same mean color), normals
     polygons: List[Polygon] = list()
     for idx, poly in enumerate(polys_normalized):
-        polygon = Polygon(poly, tex_ids[idx], point3f(*normals[idx]))
+        polygon = Polygon(poly, tex_ids[idx], point3f(0.0, 0.0, 0.0))
         polygons.append(polygon)
 
     print(skip_surfaces, "skip")
