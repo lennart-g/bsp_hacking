@@ -39,6 +39,7 @@ def get_faces_from_vertices(temp_map: Q2BSP):
     skip_surfaces = []
     num_triangles = sum([x.num_edges-2 for x in temp_map.faces])
     faces = np.zeros((num_triangles, 3, 3))
+    # faces = np.empty((0,3,3))
     triangle_counter = 0
 
     for idx, face in enumerate(temp_map.faces):
@@ -53,12 +54,21 @@ def get_faces_from_vertices(temp_map: Q2BSP):
             for vert in edge:
                 if not temp_map.vertices[vert] in current_face:
                     current_face.append(temp_map.vertices[vert])
+        # print(current_face)
         for i in range(len(current_face) - 2):
             if flags.hint or flags.nodraw or flags.sky or flags.skip:
                 skip_surfaces.append(triangle_counter)
-            faces[triangle_counter] = np.asarray([current_face[0], current_face[1], current_face[i+2]])
+            faces[triangle_counter] = np.asarray([current_face[0], current_face[i+1], current_face[i+2]])
+            # new_triangle = np.asarray([current_face[0], current_face[i+1], current_face[i+2]])
+            # faces = np.append(faces, [new_triangle], axis=0)
+            # print(faces[triangle_counter])
             triangle_counter += 1
         # faces.append(current_face)
+    mask = np.any(faces != 0, axis=(1, 2))
+
+    # Apply the mask to remove zero-filled subarrays
+    faces = faces[mask]
+
     return faces, skip_surfaces
 
 

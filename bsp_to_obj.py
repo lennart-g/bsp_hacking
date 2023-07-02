@@ -39,15 +39,21 @@ def obj_from_bsp(
     # flattened_verts = tuple(map(tuple, tmp_flattened_verts))
     # unique_verts = tuple(set(flattened_verts))
 
+    polys = polys / 1000
+
     flattened_verts = polys.reshape(-1, 3)
     _, idx = np.unique(flattened_verts, axis=0, return_index=True)
-    unique_verts = flattened_verts[np.sort(idx)]
+    unique_verts, vertex_positions = np.unique(flattened_verts, axis=0, return_inverse=True)
+    # unique_verts = flattened_verts[np.sort(idx)]
+
+    print(f'Starting obj_from_bsp: {time.time() - start_time} seconds')
 
     # save each unique vertex
-    for vert in unique_verts:
-        v = [x / 1000 for x in vert]
+    for v in unique_verts:
         line = f"v {v[0]:.4f} {v[2]:.4f} {v[1]:.4f}\n"
         vertex_lines.append(line)
+
+    print(f'Done vertex lines obj_from_bsp: {time.time() - start_time} seconds')
 
     # define each face as 1-based indices to the vertices
     # for poly in polys:
@@ -57,13 +63,17 @@ def obj_from_bsp(
     #
     #     faces.append({"verts": tmp_faces, "tex_id": poly.tex_id})
 
-    for idx,poly in enumerate(polys):
-        tmp_faces = []
-        for vert in poly:
-            index = np.where((unique_verts==vert).all(axis=1))[0][0] + 1
-            tmp_faces.append(index)
-        faces.append({"verts": tmp_faces, "tex_id": tex_ids[idx]})
 
+    # for idx,poly in enumerate(polys):
+    #     tmp_faces = []
+    #     for vert in poly:
+    #         index = np.where((unique_verts==vert).all(axis=1))[0][0] + 1
+    #         tmp_faces.append(index)
+    #     faces.append({"verts": tmp_faces, "tex_id": tex_ids[idx]})
+
+    faces = [{'verts': vertex_positions[3 * i:3 * i + 3] + 1, 'tex_id': tex_ids[i]} for i in range(len(polys))]
+
+    print(f'Done faces preparation obj_from_bsp: {time.time() - start_time} seconds')
 
 
     # break down each polygon into triangles by fan triangulation
@@ -73,12 +83,13 @@ def obj_from_bsp(
 
     for face in faces:
         verts = face["verts"]
-        for i in range(len(verts) - 2):
-            line = "f "
-            line += f"{verts[0]} {verts[i+1]} {verts[i+2]}"
-            line += "\n"
-            face_lines.append(line)
-            color_indices.append(face["tex_id"])
+        line = "f "
+        line += f"{verts[0]} {verts[1]} {verts[2]}"
+        line += "\n"
+        face_lines.append(line)
+        color_indices.append(face["tex_id"])
+
+    print(f'Done face lines obj_from_bsp: {time.time() - start_time} seconds')
 
     # save each unique color as 0-255 RGB values or RGBA for faces not rendered in-game
     for color in colors:
@@ -86,6 +97,8 @@ def obj_from_bsp(
         line += " ".join([str(x) for x in color])
         line += "\n"
         color_lines.append(line)
+
+    print(f'Done color lines obj_from_bsp: {time.time() - start_time} seconds')
 
     # save all color indices in one commented line
     color_index_line = "# "
@@ -110,5 +123,5 @@ if __name__ == '__main__':
     start_time = time.time()
     out = obj_from_bsp(bsp_path='bankrob.bsp', pball_path='/home/lennart/Downloads/pball')
     print(f'Time for obj_from_bsp: {time.time() - start_time} seconds')
-    with open('output/bankrob.obj', 'w') as f:
+    with open('output/bankrob_new.obj', 'w') as f:
         f.write(out)
