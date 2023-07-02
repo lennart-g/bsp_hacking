@@ -29,8 +29,10 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     :return: list of Polygon objects, list of RGB colors (in the case of a face normally not
     rendered in the game, e.g. a clip brush, the color is (0,0,0,0))
     """
+    # from Q2BSP object, this uses attributes .faces, tex_infos, face_edges, edge_list, vertices, .planes
+
     # instead of directly reading all information from file, the Q2BSP class is used for reading
-    temp_map = Q2BSP(path)
+    temp_map = Q2BSP(path, load_textures=True, load_geometry=True)
 
     # get a list of unique texture names (which are stored without an extension -> multiple ones
     # must be tested)
@@ -123,4 +125,7 @@ def get_average_colors(pball_path, texture_list_cleaned):
 
 
 if __name__ == '__main__':
+    import time
+    start_time = time.time()
     get_polygons("./pball/maps/beta/oddball_b1.bsp", "./pball")
+    print(f'Time for get_polygons: {time.time() - start_time} seconds')

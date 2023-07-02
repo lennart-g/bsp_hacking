@@ -3,7 +3,6 @@ import re
 import struct
 from collections.abc import Iterable
 from dataclasses import astuple, dataclass
-from statistics import mean
 from typing import List, Tuple
 
 
@@ -47,33 +46,64 @@ def flatten(lis):
 
 
 class Q2BSP:
-    def __init__(self, map_path):
+    def __init__(
+        self,
+        map_path,
+        load_all=True,
+        load_geometry=False,
+        load_textures=False,
+        load_lightmaps=False,
+        load_entities=False,
+        load_optimization=False,
+        load_others=False,
+    ):
+        if any(
+            [
+                load_geometry,
+                load_textures,
+                load_lightmaps,
+                load_entities,
+                load_optimization,
+                load_others,
+            ]
+        ):
+            load_all = False
         with open(map_path, "rb") as f:
             self.__bytes1 = f.read()
             self.magic, self.map_version = self.__get_header()
             self.lump_sizes, self.lump_order = self.__get_lump_sizes()
             self.binary_lumps = self.__get_binary_lumps()
-            self.n_clusters, self.clusters = self.__get_vis()
-            self.leaf_faces = self.__get_leaf_faces()
-            self.faces = self.__get_faces()
-            self.n_tex_infos, self.tex_infos = self.__get_tex_info()
-            self.n_models, self.models = self.__get_models()
-            self.vertices = self.__get_vertices()
-            self.edge_list = self.__get_edges()
-            self.face_edges = self.__get_face_edges()
-            self.__get_vertices_of_faces()
-            self.bsp_leaves = self.__get_bsp_leafs()
-            for leaf in self.bsp_leaves:
-                leaf.get_center(self.faces, self.leaf_faces)
-            for model in self.models:
-                model.get_center(self.faces)
-            (self.worldspawn, self.entities) = self.__get_entities()
-            self.nodes = self.__get_bsp_nodes()
-            self.planes = self.__get_planes()
-            self.brushes = self.__get_brushes()
-            self.is_vised = not len(self.binary_lumps[3]) == 0
-            self.is_lit = not len(self.binary_lumps[7]) == 0
-            self.lightmaps = self.__get_lightmaps()
+
+            if load_all or load_optimization:
+                self.n_clusters, self.clusters = self.__get_vis()
+                self.leaf_faces = self.__get_leaf_faces()
+                self.bsp_leaves = self.__get_bsp_leafs()
+                self.nodes = self.__get_bsp_nodes()
+
+            if load_all or load_textures:
+                self.n_tex_infos, self.tex_infos = self.__get_tex_info()
+
+            if load_all or load_geometry:
+                self.n_models, self.models = self.__get_models()
+
+                self.vertices = self.__get_vertices()
+                self.edge_list = self.__get_edges()
+                self.face_edges = self.__get_face_edges()
+                self.faces = self.__get_faces()
+                self.planes = self.__get_planes()
+                self.brushes = self.__get_brushes()
+
+            if load_all or load_entities:
+                (self.worldspawn, self.entities) = self.__get_entities()
+
+            if load_all or load_lightmaps:
+                self.lightmaps = self.__get_lightmaps()
+
+    def is_lit(self):
+        return not len(self.binary_lumps[7]) == 0
+
+    def is_vised(self):
+        return not len(self.binary_lumps[3]) == 0
 
     def __get_header(self):
         magic = self.__bytes1[0:4].decode("ascii", "ignore")
@@ -91,7 +121,7 @@ class Q2BSP:
             return iter(astuple(self))
 
     def __get_lump_sizes(self) -> Tuple[List[LumpSizeInfo], List[int]]:
-        lump_list = list()
+        lump_list = []
         lump_names = [
             "Entities",
             "Planes",
@@ -123,14 +153,14 @@ class Q2BSP:
             lump_list.append(lump_size)
 
         # for getting lump order
-        indiced_list = list()
+        indiced_list = []
         for i in range(19):
             indiced_list.append([lump_list[i].offset, i])
         indiced_list = sorted(indiced_list, key=operator.itemgetter(0))
         return lump_list, [x[1] for x in indiced_list]
 
     def __get_binary_lumps(self):
-        lump_list = list()
+        lump_list = []
         for i in range(19):
             lump_list.append(
                 self.__bytes1[self.lump_sizes[i].offset : self.lump_sizes[i].lump_end]
@@ -138,7 +168,7 @@ class Q2BSP:
         return lump_list
 
     def __get_lightmaps(self) -> List[RGBColor]:
-        lightmap: List[RGBColor] = list()
+        lightmap: List[RGBColor] = []
         for i in range(int(len(self.binary_lumps[7]) / 3)):
             lightmap.append(
                 RGBColor(
@@ -164,7 +194,7 @@ class Q2BSP:
 
     def __get_planes(self):
         num_planes = int(self.lump_sizes[1].length / 20)
-        plane_list = list()
+        plane_list = []
         for i in range(num_planes):
             normal = point3f(
                 *struct.unpack("<fff", self.binary_lumps[1][20 * i : 20 * i + 12])
@@ -183,7 +213,7 @@ class Q2BSP:
         self.binary_lumps[1] = planes_bytes
 
     def __get_vertices(self):
-        vert_list = list()
+        vert_list = []
         n_verts = int(self.lump_sizes[2].length / 12)
         for i in range(n_verts):
             vert_list.append(
@@ -211,7 +241,7 @@ class Q2BSP:
 
     def __get_bsp_nodes(self):
         n_nodes = int(self.lump_sizes[4].length / 28)
-        node_list = list()
+        node_list = []
         for i in range(n_nodes):
             node_list.append(self.BSPNode(self.binary_lumps[4][28 * i : 28 * (i + 1)]))
         return node_list
@@ -223,7 +253,7 @@ class Q2BSP:
             self.n_clusters = n_clusters
 
         def __decompress_bytes(self, compressed_bytes):
-            decompressed = list()
+            decompressed = []
             i = 0
             while i < len(compressed_bytes):
                 value = int.from_bytes(
@@ -342,8 +372,8 @@ class Q2BSP:
             self.binary_lumps[3][:4], byteorder="little", signed=False
         )
         # print(n_clusters)
-        pvs_offsets = list()
-        phs_offsets = list()
+        pvs_offsets = []
+        phs_offsets = []
         for i in range(n_clusters):
             pvs_offset = int.from_bytes(
                 self.binary_lumps[3][4 + 8 * i : 4 + 8 * i + 4],
@@ -360,7 +390,7 @@ class Q2BSP:
             phs_offsets.append(phs_offset)
             # print(phs_offset)
 
-        clusters = list()
+        clusters = []
         for i in range(n_clusters):
             clusters.append(
                 self.Cluster(
@@ -386,11 +416,11 @@ class Q2BSP:
         ):  # for unvised maps, dont write anything into the vis lump
             vis_bytes += len(clusters).to_bytes(4, byteorder="little")
             pvs_offsets_counter = 4 + 8 * len(clusters)
-            pvs_offsets = list()
+            pvs_offsets = []
             phs_offsets_counter = 4 + 8 * len(clusters)
             for i in range(len(clusters)):
                 phs_offsets_counter += len(self.clusters[i].compressed_pvs)
-            phs_offsets = list()
+            phs_offsets = []
             for i in range(len(clusters)):
                 pvs_offsets.append(pvs_offsets_counter)
                 pvs_offsets_counter += len(self.clusters[i].compressed_pvs)
@@ -447,7 +477,7 @@ class Q2BSP:
             if (
                 not flags == 0 and not flags == 2147483648
             ):  # not 0 or negative 0 (sign bit set to 1)
-                flag_list = list()
+                flag_list = []
                 for l in range(32):  # size of surface flag part
                     if not flags & 2**l == 0:  # flag 2**l is in flag sum
                         flag_list.append(2**l)
@@ -479,7 +509,7 @@ class Q2BSP:
 
     def __get_tex_info(self):
         n_tex_info = int(self.lump_sizes[5].length / 76)
-        tex_info_list = list()
+        tex_info_list = []
         for i in range(n_tex_info):
             tex_info_list.append(
                 self.TexInfo(self.binary_lumps[5][76 * i : 76 * (i + 1)])
@@ -511,7 +541,7 @@ class Q2BSP:
             self.lightmap_offsets = int.from_bytes(
                 face_bytes[16:20], byteorder="little", signed=False
             )
-            self.vertices = list()
+            self.vertices = []
 
         def save_to_bytes(self):
             new_bytes = b""
@@ -525,7 +555,7 @@ class Q2BSP:
 
     def __get_faces(self):
         num_faces = int(self.lump_sizes[6].length / 20)
-        face_list = list()
+        face_list = []
         for i in range(num_faces):
             face_list.append(self.Face(self.binary_lumps[6][20 * i : 20 * (i + 1)]))
         return face_list
@@ -545,31 +575,10 @@ class Q2BSP:
             self.num_leaf_faces = int.from_bytes(leaf_bytes[22:24], byteorder="little")
             # print(f"num leaf faces: {self.num_leaf_faces}")
             self.__bytes_list = leaf_bytes
-            self.center = list()
             self.bbox_min = [None] * 3
             self.bbox_max = [None] * 3
             (self.bbox_min[:]) = struct.unpack("<hhh", leaf_bytes[8:14])
             (self.bbox_max[:]) = struct.unpack("<hhh", leaf_bytes[14:20])
-
-        def get_center(self, faces, leaf_faces):
-            own_faces = list()
-            # print(f"num faces: {self.num_leaf_faces}")
-            for i in range(self.num_leaf_faces):
-                own_faces.append(faces[leaf_faces[self.first_leaf_face + i]].vertices)
-            # print(f"own_faces: {own_faces}")
-            own_faces = [c for b in own_faces for c in b]
-            own_faces = [c for b in own_faces for c in b]
-            own_faces = [[int(c) for c in b] for b in own_faces]
-            # print(f"own_faces: {own_faces}")
-            if own_faces:
-                # print(f"local: {[x[0][0] for x in own_faces]}")
-
-                self.center = [
-                    mean([x[0] for x in own_faces]),
-                    mean([x[1] for x in own_faces]),
-                    mean([x[2] for x in own_faces]),
-                ]
-            # print(f"center: {self.center}")
 
         def save_to_bytes(self):
             before_faces = (
@@ -593,7 +602,7 @@ class Q2BSP:
 
     def __get_bsp_leafs(self):
         n_bsp_leafs = int(self.lump_sizes[8].length / 28)
-        bsp_leaf_list = list()
+        bsp_leaf_list = []
         for i in range(n_bsp_leafs):
             bsp_leaf_list.append(
                 self.BSPLeaf(self.binary_lumps[8][28 * i : 28 * (i + 1)])
@@ -608,7 +617,7 @@ class Q2BSP:
 
     def __get_leaf_faces(self):
         n_leaf_faces = int(self.lump_sizes[9].length / 2)
-        leaf_face_list = list()
+        leaf_face_list = []
         for i in range((n_leaf_faces)):
             leaf_face_list.append(
                 int.from_bytes(
@@ -626,7 +635,7 @@ class Q2BSP:
         self.binary_lumps[9] = new_bytes
 
     def __get_edges(self):
-        edge_list = list()
+        edge_list = []
         n_edges = int(self.lump_sizes[11].length / 4)
         for i in range(n_edges):
             edge_list.append(
@@ -635,7 +644,7 @@ class Q2BSP:
         return edge_list
 
     def __get_face_edges(self):
-        face_edge_list = list()
+        face_edge_list = []
         n_face_edges = int(self.lump_sizes[12].length / 4)
         for i in range(n_face_edges):
             face_edge_list.append(
@@ -648,7 +657,7 @@ class Q2BSP:
         return face_edge_list
 
     def __get_entities(self):
-        entities = list()
+        entities = []
         # print(chr(*struct.unpack("<I", b"0x88")))
 
         raw_entity_lines = bytearray(self.binary_lumps[0]).decode("cp1252")
@@ -742,23 +751,6 @@ class Q2BSP:
             (self.origin[:]) = struct.unpack("<fff", model_bytes[24:36])
             self.first_face = int.from_bytes(model_bytes[40:44], byteorder="little")
             self.num_faces = int.from_bytes(model_bytes[44:48], byteorder="little")
-            self.center = list()
-
-        def get_center(self, faces):
-            own_faces = list()
-            for i in range(self.num_faces):
-                own_faces.append(faces[self.first_face + i].vertices)
-            # print(f"own_faces: {own_faces}")
-            own_faces = [c for b in own_faces for c in b]
-            own_faces = [c for b in own_faces for c in b]
-            own_faces = [[int(c) for c in b] for b in own_faces]
-            if own_faces:
-                # print(f"local: {[x[0][0] for x in own_faces]}")
-                self.center = [
-                    mean([x[0] for x in own_faces]),
-                    mean([x[1] for x in own_faces]),
-                    mean([x[2] for x in own_faces]),
-                ]
 
         def save_to_bytes(self):
             before_bytes = b""
@@ -780,7 +772,7 @@ class Q2BSP:
 
     def __get_models(self):
         n_models = int(self.lump_sizes[13].length / 48)
-        model_list = list()
+        model_list = []
         for i in range(n_models):
             model_list.append(self.Model(self.binary_lumps[13][48 * i : 48 * (i + 1)]))
         return n_models, model_list
@@ -835,7 +827,7 @@ class Q2BSP:
 
     def __get_brushes(self):
         n_brushes = int(len(self.binary_lumps[14]) / 12)
-        brush_list = list()
+        brush_list = []
         for i in range(n_brushes):
             brush_list.append(self.Brush(self.binary_lumps[14][12 * i : 12 * i + 12]))
         return brush_list
@@ -857,36 +849,6 @@ class Q2BSP:
             )
 
         self.binary_lumps[14] = new_bytes
-
-    def __get_vertices_of_faces(self):
-        # print(f"len vertices: {len(self.vertices)} - max: {max(self.edge_list)}")
-        # print(f"verts: {self.vertices}\n - min: {min(self.vertices)} - max: {max(self.vertices)} - len: {len(self.vertices)}")
-        # print(f"edges: {self.edge_list}\n - min: {min(self.edge_list)} - max: {max(self.edge_list)} - len: {len(self.edge_list)}")
-        # print(f"face edges: {self.face_edges}\n - min: {min(self.face_edges)} - max: {max(self.face_edges)} - len: {len(self.face_edges)}")
-        # print(f"faces: {self.faces}\n - min: {min([x.num_edges+x.first_edge for x in self.faces])} - max: {max([x.num_edges+x.first_edge for x in self.faces])} - len: {len([x.num_edges+x.first_edge for x in self.faces])}")
-        for idx, face in enumerate(self.faces):
-            # print()
-            face_edges = self.face_edges[
-                face.first_edge : face.first_edge + face.num_edges
-            ]
-            # print(f"face edges: {face_edges} len: {len(self.edge_list)}")
-            # print(f"max edge: {max([self.edge_list[x] for x in face_edges])} len: {len(self.edge_list)} - max: {max(self.edge_list)}")
-            # print([self.edge_list[self.face_edges[x]] for x in face_edges])
-            # print([(self.vertices[self.edge_list[self.face_edges[x]][0]],self.vertices[self.edge_list[self.face_edges[x]][1]]) for x in face_edges])
-            # edges = list()
-            # for face_edge in face_edges:
-            #     edges.append(self.face_edges[face_edge])
-            # verts = list()
-            # for edge in edges:
-            #     # print(f"edge: {edge} - len vertices: {len(self.vertices)}")
-            #     verts.append(self.vertices[edge])
-            self.faces[idx].vertices = [
-                (
-                    self.vertices[self.edge_list[self.face_edges[x]][0]],
-                    self.vertices[self.edge_list[self.face_edges[x]][1]],
-                )
-                for x in face_edges
-            ]
 
     def insert_leaf_faces(self, face_list, index):
         """
@@ -955,3 +917,13 @@ class Q2BSP:
             )
         with open(path.replace(".bsp", suffix + ".bsp"), "w+b") as h:
             h.write(bytes2)
+
+
+if __name__ == "__main__":
+    import time
+
+    start_time = time.time()
+    temp = Q2BSP(
+        "pball/maps/beta/oddball_b1.bsp", load_geometry=True, load_textures=True
+    )
+    print(f"Time for get_polygons: {time.time() - start_time} seconds")
