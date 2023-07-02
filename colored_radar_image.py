@@ -54,6 +54,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # get minimal of all x y and z values and move all vertices so they all have coordinate
     # values >= 0
     polys_normalized = normalize_faces(faces)
+    # polys_normalized = faces
 
     # construct polygon list out of the faces, indices into unique textures aka colors (two
     # different textures could have the same mean color), normals
@@ -130,5 +131,5 @@ def get_average_colors(pball_path, texture_list_cleaned):
 if __name__ == '__main__':
     import time
     start_time = time.time()
-    get_polygons("./pball/maps/beta/oddball_b1.bsp", "./pball")
+    get_polygons("/home/lennart/Downloads/pball/maps/bankrob.bsp", "/home/lennart/Downloads/pball")
     print(f'Time for get_polygons: {time.time() - start_time} seconds')

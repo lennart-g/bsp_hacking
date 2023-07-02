@@ -40,7 +40,8 @@ def obj_from_bsp(
     # unique_verts = tuple(set(flattened_verts))
 
     flattened_verts = polys.reshape(-1, 3)
-    unique_verts = np.unique(flattened_verts, axis=0)
+    _, idx = np.unique(flattened_verts, axis=0, return_index=True)
+    unique_verts = flattened_verts[np.sort(idx)]
 
     # save each unique vertex
     for vert in unique_verts:
@@ -59,7 +60,7 @@ def obj_from_bsp(
     for idx,poly in enumerate(polys):
         tmp_faces = []
         for vert in poly:
-            index = np.where(unique_verts==vert)[0][0] + 1
+            index = int(np.where((unique_verts==vert).all(axis=1))[0]) + 1
             tmp_faces.append(index)
         faces.append({"verts": tmp_faces, "tex_id": tex_ids[idx]})
 
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     # before: Time for obj_from_bsp: 11.885419607162476 seconds
     import time
     start_time = time.time()
-    out = obj_from_bsp(bsp_path='bankrob.bsp', pball_path='/home/lennart/Downloads/pball')
+    out = obj_from_bsp(bsp_path='crates_hd.bsp', pball_path='/home/lennart/Downloads/pball')
     print(f'Time for obj_from_bsp: {time.time() - start_time} seconds')
-    with open('output/bankrob.obj', 'w') as f:
+    with open('output/crates_hd.obj', 'w') as f:
         f.write(out)
