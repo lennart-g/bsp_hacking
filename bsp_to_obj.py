@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-
+import logging
 from colored_radar_image import get_polygons
 
 
@@ -46,14 +46,14 @@ def obj_from_bsp(
     unique_verts, vertex_positions = np.unique(flattened_verts, axis=0, return_inverse=True)
     # unique_verts = flattened_verts[np.sort(idx)]
 
-    print(f'Starting obj_from_bsp: {time.time() - start_time} seconds')
+    logging.debug(f'Starting obj_from_bsp')
 
     # save each unique vertex
     for v in unique_verts:
         line = f"v {v[0]:.4f} {v[2]:.4f} {v[1]:.4f}\n"
         vertex_lines.append(line)
 
-    print(f'Done vertex lines obj_from_bsp: {time.time() - start_time} seconds')
+    logging.debug(f'Done vertex lines obj_from_bsp')
 
     # define each face as 1-based indices to the vertices
     # for poly in polys:
@@ -73,7 +73,7 @@ def obj_from_bsp(
 
     faces = [{'verts': vertex_positions[3 * i:3 * i + 3] + 1, 'tex_id': tex_ids[i]} for i in range(len(polys))]
 
-    print(f'Done faces preparation obj_from_bsp: {time.time() - start_time} seconds')
+    logging.debug(f'Done faces preparation obj_from_bsp')
 
 
     # break down each polygon into triangles by fan triangulation
@@ -89,7 +89,7 @@ def obj_from_bsp(
         face_lines.append(line)
         color_indices.append(face["tex_id"])
 
-    print(f'Done face lines obj_from_bsp: {time.time() - start_time} seconds')
+    logging.debug(f'Done generating face lines obj_from_bsp')
 
     # save each unique color as 0-255 RGB values or RGBA for faces not rendered in-game
     for color in colors:
@@ -98,7 +98,7 @@ def obj_from_bsp(
         line += "\n"
         color_lines.append(line)
 
-    print(f'Done color lines obj_from_bsp: {time.time() - start_time} seconds')
+    logging.debug(f'Done generating color lines obj_from_bsp')
 
     # save all color indices in one commented line
     color_index_line = "# "
@@ -110,10 +110,10 @@ def obj_from_bsp(
     obj_file += "".join(color_lines)
     obj_file += color_index_line
 
-    print(f"vertex lines: {len(vertex_lines)}")
-    print(f"face lines: {len(face_lines)}")
-    print(f"color lines: {len(color_indices)}")
-    print(f"color indices: {len(color_indices)}")
+    logging.debug(f"vertex lines: {len(vertex_lines)}")
+    logging.debug(f"face lines: {len(face_lines)}")
+    logging.debug(f"color lines: {len(color_indices)}")
+    logging.debug(f"color indices: {len(color_indices)}")
     return obj_file
 
 
