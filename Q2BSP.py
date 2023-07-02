@@ -122,7 +122,7 @@ class Q2BSP:
 
     def __get_lump_sizes(self) -> Tuple[List[LumpSizeInfo], List[int]]:
         lump_list = []
-        lump_names = [
+        lump_names = (
             "Entities",
             "Planes",
             "Vertices",
@@ -142,7 +142,7 @@ class Q2BSP:
             "Pop",
             "Areas",
             "Area Portals",
-        ]
+        )
         for i in range(19):
             (offset, length) = struct.unpack(
                 "<II", self.__bytes1[8 + 8 * i : 16 + 8 * i]
@@ -157,7 +157,7 @@ class Q2BSP:
         for i in range(19):
             indiced_list.append([lump_list[i].offset, i])
         indiced_list = sorted(indiced_list, key=operator.itemgetter(0))
-        return lump_list, [x[1] for x in indiced_list]
+        return lump_list, tuple(x[1] for x in indiced_list)
 
     def __get_binary_lumps(self):
         lump_list = []
@@ -213,12 +213,11 @@ class Q2BSP:
         self.binary_lumps[1] = planes_bytes
 
     def __get_vertices(self):
-        vert_list = []
         n_verts = int(self.lump_sizes[2].length / 12)
-        for i in range(n_verts):
-            vert_list.append(
-                list(struct.unpack("<fff", self.binary_lumps[2][12 * i : 12 * (i + 1)]))
-            )
+        vert_list = tuple(
+            struct.unpack("<fff", self.binary_lumps[2][12 * i : 12 * (i + 1)])
+            for i in range(n_verts)
+        )
         return vert_list
 
     class BSPNode:
@@ -509,11 +508,10 @@ class Q2BSP:
 
     def __get_tex_info(self):
         n_tex_info = int(self.lump_sizes[5].length / 76)
-        tex_info_list = []
-        for i in range(n_tex_info):
-            tex_info_list.append(
-                self.TexInfo(self.binary_lumps[5][76 * i : 76 * (i + 1)])
-            )
+        tex_info_list = tuple(
+            self.TexInfo(self.binary_lumps[5][76 * i : 76 * (i + 1)])
+            for i in range(n_tex_info)
+        )
         return n_tex_info, tex_info_list
 
     def save_tex_info(self, tex_info_list):
@@ -555,9 +553,10 @@ class Q2BSP:
 
     def __get_faces(self):
         num_faces = int(self.lump_sizes[6].length / 20)
-        face_list = []
-        for i in range(num_faces):
-            face_list.append(self.Face(self.binary_lumps[6][20 * i : 20 * (i + 1)]))
+        face_list = tuple(
+            self.Face(self.binary_lumps[6][20 * i : 20 * (i + 1)])
+            for i in range(num_faces)
+        )
         return face_list
 
     def save_faces(self, faces):
@@ -635,25 +634,24 @@ class Q2BSP:
         self.binary_lumps[9] = new_bytes
 
     def __get_edges(self):
-        edge_list = []
         n_edges = int(self.lump_sizes[11].length / 4)
-        for i in range(n_edges):
-            edge_list.append(
-                struct.unpack("<HH", self.binary_lumps[11][4 * i : 4 * (i + 1)])
-            )
+        edge_list = tuple(
+            struct.unpack("<HH", self.binary_lumps[11][4 * i : 4 * (i + 1)])
+            for i in range(n_edges)
+        )
         return edge_list
 
     def __get_face_edges(self):
-        face_edge_list = []
         n_face_edges = int(self.lump_sizes[12].length / 4)
-        for i in range(n_face_edges):
-            face_edge_list.append(
-                int.from_bytes(
-                    self.binary_lumps[12][4 * i : 4 * (i + 1)],
-                    byteorder="little",
-                    signed=True,
-                )
+
+        face_edge_list = tuple(
+            int.from_bytes(
+                self.binary_lumps[12][4 * i : 4 * (i + 1)],
+                byteorder="little",
+                signed=True,
             )
+            for i in range(n_face_edges)
+        )
         return face_edge_list
 
     def __get_entities(self):
@@ -772,9 +770,10 @@ class Q2BSP:
 
     def __get_models(self):
         n_models = int(self.lump_sizes[13].length / 48)
-        model_list = []
-        for i in range(n_models):
-            model_list.append(self.Model(self.binary_lumps[13][48 * i : 48 * (i + 1)]))
+        model_list = tuple(
+            self.Model(self.binary_lumps[13][48 * i : 48 * (i + 1)])
+            for i in range(n_models)
+        )
         return n_models, model_list
 
     def save_models(self, models):
@@ -827,9 +826,10 @@ class Q2BSP:
 
     def __get_brushes(self):
         n_brushes = int(len(self.binary_lumps[14]) / 12)
-        brush_list = []
-        for i in range(n_brushes):
-            brush_list.append(self.Brush(self.binary_lumps[14][12 * i : 12 * i + 12]))
+        brush_list = tuple(
+            self.Brush(self.binary_lumps[14][12 * i : 12 * i + 12])
+            for i in range(n_brushes)
+        )
         return brush_list
 
     def save_brushes(self, brushes):
