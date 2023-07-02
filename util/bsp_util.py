@@ -37,6 +37,7 @@ def get_faces_from_vertices(temp_map: Q2BSP):
     """
     # faces: List[List[Tuple[float, float, float]]] = []
     skip_surfaces = []
+    tex_ids = []
     num_triangles = sum([x.num_edges-2 for x in temp_map.faces])
     faces = np.zeros((num_triangles, 3, 3))
     # faces = np.empty((0,3,3))
@@ -63,13 +64,14 @@ def get_faces_from_vertices(temp_map: Q2BSP):
             # faces = np.append(faces, [new_triangle], axis=0)
             # print(faces[triangle_counter])
             triangle_counter += 1
+            tex_ids.append(face.texture_info)
         # faces.append(current_face)
     mask = np.any(faces != 0, axis=(1, 2))
 
     # Apply the mask to remove zero-filled subarrays
     faces = faces[mask]
 
-    return faces, skip_surfaces
+    return faces, tex_ids, skip_surfaces
 
 
 def get_unique_texture_names(temp_map: Q2BSP) -> Tuple[List[str], List[str]]:

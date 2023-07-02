@@ -119,6 +119,8 @@ def obj_from_bsp(
 
 if __name__ == '__main__':
     # before: Time for obj_from_bsp: 11.885419607162476 seconds
+    import sys
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     import time
     start_time = time.time()
     out = obj_from_bsp(bsp_path='bankrob.bsp', pball_path='/home/lennart/Downloads/pball')

@@ -45,11 +45,11 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # can easily change one color for all faces using the same one
     # tex_indices = [x.texture_info for x in temp_map.faces]
     tex_indices = [x.texture_info for x in temp_map.faces for y in range(x.num_edges-2)]
-    tex_ids = [unique_textures.index(textures[tex_index]) for tex_index in tex_indices]
 
     # each face is a list of vertices stored as Tuples
     # faces, skip_surfaces = get_faces_from_vertices(temp_map)
-    faces, skip_surfaces = get_faces_from_vertices(temp_map)
+    faces, tex_ids, skip_surfaces = get_faces_from_vertices(temp_map)
+    tex_ids = [unique_textures.index(textures[tex_index]) for tex_index in tex_ids]
 
     # get minimal of all x y and z values and move all vertices so they all have coordinate
     # values >= 0
