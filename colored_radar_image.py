@@ -8,7 +8,7 @@ from Q2BSP import *
 from util.bsp_util import get_faces_from_vertices, get_normals, get_unique_texture_names
 from util.geometry import normalize_faces
 from util.texture_util import get_average_color
-
+import numpy as np
 
 @dataclass
 class Polygon:
@@ -49,7 +49,7 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
     # each face is a list of vertices stored as Tuples
     # faces, skip_surfaces = get_faces_from_vertices(temp_map)
-    faces, _ = get_faces_from_vertices(temp_map)
+    faces, skip_surfaces = get_faces_from_vertices(temp_map)
 
     # get minimal of all x y and z values and move all vertices so they all have coordinate
     # values >= 0
@@ -65,6 +65,9 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
     # print(skip_surfaces, "skip")
     # for i in skip_surfaces[::-1]:
     #     polygons.pop(i)
+
+    polys_normalized = np.delete(polys_normalized, skip_surfaces, axis=0)
+    tex_ids = [x for i, x in enumerate(tex_ids) if i not in skip_surfaces]
 
     return polys_normalized, tex_ids, average_colors
 

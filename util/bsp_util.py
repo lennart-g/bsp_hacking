@@ -43,8 +43,6 @@ def get_faces_from_vertices(temp_map: Q2BSP):
 
     for idx, face in enumerate(temp_map.faces):
         flags = temp_map.tex_infos[face.texture_info].flags
-        if flags.hint or flags.nodraw or flags.sky or flags.skip:
-            skip_surfaces.append(idx)
         current_face: List[Tuple] = []
         for i in range(face.num_edges):
             face_edge = temp_map.face_edges[face.first_edge + i]
@@ -56,7 +54,9 @@ def get_faces_from_vertices(temp_map: Q2BSP):
                 if not temp_map.vertices[vert] in current_face:
                     current_face.append(temp_map.vertices[vert])
         for i in range(len(current_face) - 2):
-            faces[i] = np.asarray([current_face[0], current_face[1], current_face[i+2]])
+            if flags.hint or flags.nodraw or flags.sky or flags.skip:
+                skip_surfaces.append(triangle_counter)
+            faces[triangle_counter] = np.asarray([current_face[0], current_face[1], current_face[i+2]])
             triangle_counter += 1
         # faces.append(current_face)
     return faces, skip_surfaces
