@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 from Q2BSP import Q2BSP, point3f
-
+import numpy as np
 
 def get_normals(temp_map: Q2BSP) -> List[List[float]]:
     """
@@ -35,8 +35,12 @@ def get_faces_from_vertices(temp_map: Q2BSP):
     rendered in-game (hint, nodraw, skip) as well as sky surfaces as they would block vision by
     sealing off the map.
     """
-    faces: List[List[Tuple[float, float, float]]] = []
+    # faces: List[List[Tuple[float, float, float]]] = []
     skip_surfaces = []
+    num_triangles = sum([x.num_edges-2 for x in temp_map.faces])
+    faces = np.zeros((num_triangles, 3, 3))
+    triangle_counter = 0
+
     for idx, face in enumerate(temp_map.faces):
         flags = temp_map.tex_infos[face.texture_info].flags
         if flags.hint or flags.nodraw or flags.sky or flags.skip:
@@ -51,7 +55,10 @@ def get_faces_from_vertices(temp_map: Q2BSP):
             for vert in edge:
                 if not temp_map.vertices[vert] in current_face:
                     current_face.append(temp_map.vertices[vert])
-        faces.append(current_face)
+        for i in range(len(current_face) - 2):
+            faces[i] = np.asarray([current_face[0], current_face[1], current_face[i+2]])
+            triangle_counter += 1
+        # faces.append(current_face)
     return faces, skip_surfaces
 
 

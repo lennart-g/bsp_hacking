@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 from colored_radar_image import get_polygons
 
 
@@ -19,7 +21,7 @@ def obj_from_bsp(
     :param pball_path: path to pball directory
     :return: .obj file as string
     """
-    (polys, colors) = get_polygons(
+    (polys, tex_ids, colors) = get_polygons(
         os.path.join(pball_path, "maps", bsp_path), pball_path
     )
 
@@ -33,9 +35,13 @@ def obj_from_bsp(
 
     obj_file += "# OBJ file\n"
 
-    tmp_flattened_verts = [v for poly in polys for v in poly.vertices]
-    flattened_verts = tuple(map(tuple, tmp_flattened_verts))
-    unique_verts = tuple(set(flattened_verts))
+    # tmp_flattened_verts = [v for poly in polys for v in poly.vertices]
+    # flattened_verts = tuple(map(tuple, tmp_flattened_verts))
+    # unique_verts = tuple(set(flattened_verts))
+
+    flattened_verts = polys.reshape(-1, 3)
+    unique_verts = np.unique(flattened_verts, axis=0)
+
     # save each unique vertex
     for vert in unique_verts:
         v = [x / 1000 for x in vert]
@@ -43,12 +49,21 @@ def obj_from_bsp(
         vertex_lines.append(line)
 
     # define each face as 1-based indices to the vertices
-    for poly in polys:
-        tmp_faces = []
-        for v in poly.vertices:
-            tmp_faces.append(unique_verts.index(tuple(v)) + 1)
+    # for poly in polys:
+    #     tmp_faces = []
+    #     for v in poly.vertices:
+    #         tmp_faces.append(unique_verts.index(tuple(v)) + 1)
+    #
+    #     faces.append({"verts": tmp_faces, "tex_id": poly.tex_id})
 
-        faces.append({"verts": tmp_faces, "tex_id": poly.tex_id})
+    for idx,poly in enumerate(polys):
+        tmp_faces = []
+        for vert in poly:
+            index = np.where(unique_verts==vert)[0][0] + 1
+            tmp_faces.append(index)
+        faces.append({"verts": tmp_faces, "tex_id": tex_ids[idx]})
+
+
 
     # break down each polygon into triangles by fan triangulation
     # save each triangle as 1-based indices to the vertices
@@ -89,4 +104,10 @@ def obj_from_bsp(
 
 
 if __name__ == '__main__':
-    obj_from_bsp()
+    # before: Time for obj_from_bsp: 11.885419607162476 seconds
+    import time
+    start_time = time.time()
+    out = obj_from_bsp(bsp_path='bankrob.bsp', pball_path='/home/lennart/Downloads/pball')
+    print(f'Time for obj_from_bsp: {time.time() - start_time} seconds')
+    with open('output/bankrob.obj', 'w') as f:
+        f.write(out)

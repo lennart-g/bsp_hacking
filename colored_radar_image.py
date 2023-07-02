@@ -43,11 +43,13 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
     # instead of storing face color directly in the Polygon object, store an index so that you
     # can easily change one color for all faces using the same one
-    tex_indices = [x.texture_info for x in temp_map.faces]
+    # tex_indices = [x.texture_info for x in temp_map.faces]
+    tex_indices = [x.texture_info for x in temp_map.faces for y in range(x.num_edges-2)]
     tex_ids = [unique_textures.index(textures[tex_index]) for tex_index in tex_indices]
 
     # each face is a list of vertices stored as Tuples
-    faces, skip_surfaces = get_faces_from_vertices(temp_map)
+    # faces, skip_surfaces = get_faces_from_vertices(temp_map)
+    faces, _ = get_faces_from_vertices(temp_map)
 
     # get minimal of all x y and z values and move all vertices so they all have coordinate
     # values >= 0
@@ -55,16 +57,16 @@ def get_polygons(path: str, pball_path: str) -> Tuple[List[Polygon], List[Tuple[
 
     # construct polygon list out of the faces, indices into unique textures aka colors (two
     # different textures could have the same mean color), normals
-    polygons: List[Polygon] = list()
-    for idx, poly in enumerate(polys_normalized):
-        polygon = Polygon(poly, tex_ids[idx], point3f(0.0, 0.0, 0.0))
-        polygons.append(polygon)
+    # polygons: List[Polygon] = list()
+    # for idx, poly in enumerate(polys_normalized):
+    #     polygon = Polygon(poly, tex_ids[idx], point3f(0.0, 0.0, 0.0))
+    #     polygons.append(polygon)
+    #
+    # print(skip_surfaces, "skip")
+    # for i in skip_surfaces[::-1]:
+    #     polygons.pop(i)
 
-    print(skip_surfaces, "skip")
-    for i in skip_surfaces[::-1]:
-        polygons.pop(i)
-
-    return polygons, average_colors
+    return polys_normalized, tex_ids, average_colors
 
 
 def get_average_colors(pball_path, texture_list_cleaned):
