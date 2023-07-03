@@ -44,13 +44,12 @@ def obj_from_bsp(
     flattened_verts = polys.reshape(-1, 3)
     _, idx = np.unique(flattened_verts, axis=0, return_index=True)
     unique_verts, vertex_positions = np.unique(flattened_verts, axis=0, return_inverse=True)
-    # unique_verts = flattened_verts[np.sort(idx)]
 
     logging.debug(f'Starting obj_from_bsp')
 
     # save each unique vertex
     for v in unique_verts:
-        line = f"v {v[0]:.4f} {v[2]:.4f} {v[1]:.4f}\n"
+        line = f"v {v[0]:.4f} {v[2]:.4f} {-v[1]:.4f}\n"
         vertex_lines.append(line)
 
     logging.debug(f'Done vertex lines obj_from_bsp')
@@ -120,7 +119,7 @@ def obj_from_bsp(
 if __name__ == '__main__':
     # before: Time for obj_from_bsp: 11.885419607162476 seconds
     import sys
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     import time
     start_time = time.time()
     out = obj_from_bsp(bsp_path='bankrob.bsp', pball_path='/home/lennart/Downloads/pball')

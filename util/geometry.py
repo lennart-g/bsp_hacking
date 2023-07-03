@@ -10,7 +10,7 @@ def normalize_faces(
     :return: list of faces defined by shifted vertices
     """
     mins = faces.min(axis=(0,1))
-    # maxs = faces.max(axis=(0,1))
+    maxs = faces.max(axis=(0,1))
 
     # min_x = min([a[0] for b in faces for a in b])
     # min_y = min([a[1] for b in faces for a in b])
@@ -21,4 +21,4 @@ def normalize_faces(
     # ]
     # return polys_normalized
 
-    return faces - mins
+    return faces - (maxs+mins)/2
