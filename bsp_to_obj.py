@@ -49,7 +49,7 @@ def obj_from_bsp(
 
     # save each unique vertex
     for v in unique_verts:
-        line = f"v {v[0]:.4f} {v[2]:.4f} {-v[1]:.4f}\n"
+        line = f"v {v[1]:.4f} {v[2]:.4f} {v[0]:.4f}\n"
         vertex_lines.append(line)
 
     logging.debug(f'Done vertex lines obj_from_bsp')
