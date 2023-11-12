@@ -1,12 +1,15 @@
 import operator
-import math
 import struct
-from PIL import Image, ImageDraw, ImageFont
 from statistics import mean
 import re
 from dataclasses import dataclass, astuple
-from typing import Tuple, List, Dict, NamedTuple
-from collections import Iterable
+from typing import Tuple, List
+try:
+    # Python 3.10 and above
+    from collections.abc import Iterable
+except ImportError:
+    # Python 3.9 and below
+    from collections import Iterable
 
 
 @dataclass

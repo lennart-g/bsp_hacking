@@ -1,24 +1,16 @@
-from . import Q2BSP
+try:
+    # same directory import in released version
+    from . import Q2BSP
+except ImportError:
+    # absolute import for development
+    import Q2BSP
 import os
 import bpy
 
 
-def blender_load_bsp(md2_path, displayed_name):
-    """
-    This function uses the information from a md2 dataclass into a blender object.
-    This will consist of an animated mesh and its material (which is not much more than the texture.
-    For better understanding, steps are:
-        - Create the MD2 object containing all information that's inside the loaded md2
-        - Get the absolute path of the UV map / skin to load
-        - Get necessary information about the mesh (vertices, tris, uv coordinates)
-        - Create the scene structure and create the mesh for the first frame
-        - Assign UV coordinates to each triangle
-        - Create shape animation (Add keyframe to each vertex)
-        - Assign skin to mesh
-    """
+def blender_load_bsp(object_path, displayed_name):
     """ Create Q2BSP dataclass object """
-    object_path = md2_path  # Kept for testing purposes
-    # A dataclass containing all information stored in a .md2 file
+    # A class containing (most) information stored in a .bsp file
     my_map = Q2BSP.Q2BSP(object_path)
 
     if not displayed_name:

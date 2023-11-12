@@ -2,7 +2,7 @@ bl_info = {
     "name": "Experimental BSP Importer",
     "author": "Lennart G",
     "location": "File > Import > Quake 2 BSP (.bsp)",
-    "version": (0, 1, 0),
+    "version": (0, 2, 0),
     "blender": (2, 80, 0),
     "category": "Import-Export"
 }
@@ -10,13 +10,19 @@ bl_info = {
 # To support reload properly, try to access a package var,
 # if it's there, reload everything
 if "bpy" in locals():
-  import imp
-  imp.reload(Q2BSP)
-  imp.reload(blender_load_bsp)
-  print("Reloaded multifiles")
+    import importlib
+    try:
+        # relative import in release
+        importlib.reload(Q2BSP)
+    except NameError:
+        # absolute import in development
+        import Q2BSP
+        importlib.reload(Q2BSP)
+    importlib.reload(blender_load_bsp)
+    print("Reloaded multifiles")
 else:
-  from . import blender_load_bsp
-  print("Imported multifiles")
+    from . import blender_load_bsp
+    print("Imported multifiles")
 
 """
 This part is required for the UI, to make the Addon appear under File > Import once it's
