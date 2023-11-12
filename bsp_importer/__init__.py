@@ -10,13 +10,13 @@ bl_info = {
 # To support reload properly, try to access a package var,
 # if it's there, reload everything
 if "bpy" in locals():
-  import imp
-  imp.reload(Q2BSP)
-  imp.reload(blender_load_bsp)
-  print("Reloaded multifiles")
+    import imp
+    imp.reload(Q2BSP)
+    imp.reload(blender_load_bsp)
+    print("Reloaded multifiles")
 else:
-  from . import blender_load_bsp
-  print("Imported multifiles")
+    from . import blender_load_bsp
+    print("Imported multifiles")
 
 """
 This part is required for the UI, to make the Addon appear under File > Import once it's
