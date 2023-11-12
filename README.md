@@ -22,6 +22,9 @@ For information on the Quake 2 BSP file format, see [Quake 2 BSP File Format
 by Max McGuire (07 June 2000)](https://www.flipcode.com/archives/Quake_2_BSP_File_Format.shtml).
 
 ## [Blender BSP Importer](docs/blender_importer.md)
+Testing in blender 2.83.20 LTS (Python 3.7.4) and blender 3.6.5 LTS 
+(Python 3.10.13).
+
 ![img.png](imgs/blender_importer.png)
 The current version was built for mesh-only import to blender, solidification
 and export as STL for 3D printing.
