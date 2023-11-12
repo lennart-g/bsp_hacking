@@ -11,7 +11,8 @@ files = [
 # intermediary location for the directory to be zipped
 dest = "build/io_import_bsp"
 
-os.rmdir("build")
+if os.path.exists("build") and os.path.isdir("build"):
+    os.rmdir("build")
 os.makedirs(dest)
 
 for file in files:
