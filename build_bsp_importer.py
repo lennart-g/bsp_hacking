@@ -11,8 +11,8 @@ files = [
 # intermediary location for the directory to be zipped
 dest = "build/io_import_bsp"
 
-if not os.path.exists(dest):
-    os.makedirs(dest)
+os.rmdir("build")
+os.makedirs(dest)
 
 for file in files:
     shutil.copyfile(file, os.path.join(dest, os.path.basename(file)))
