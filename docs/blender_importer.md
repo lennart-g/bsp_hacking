@@ -11,6 +11,10 @@ The add-on will show up in File > Import > WIP Quake 2 Level Import (.bsp).
 The created object will likely need to be scaled down by a factor of 0.1
 or more.
 
+## Build
+Run `python3 build_bsp_importer.py` which outputs a .zip file
+(`blender-bsp-importer.zip`) in project root.
+
 ## Development
 Create a module like the following, e.g. in `bsp_importer/dev_register.py`.
 Open it in the blender script editor. Adjust `package_path` to
