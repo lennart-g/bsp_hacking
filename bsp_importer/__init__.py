@@ -10,15 +10,15 @@ bl_info = {
 # To support reload properly, try to access a package var,
 # if it's there, reload everything
 if "bpy" in locals():
-    import imp
+    import importlib
     try:
         # relative import in release
-        imp.reload(Q2BSP)
+        importlib.reload(Q2BSP)
     except NameError:
         # absolute import in development
         import Q2BSP
-        imp.reload(Q2BSP)
-    imp.reload(blender_load_bsp)
+        importlib.reload(Q2BSP)
+    importlib.reload(blender_load_bsp)
     print("Reloaded multifiles")
 else:
     from . import blender_load_bsp

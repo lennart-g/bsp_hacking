@@ -24,7 +24,7 @@ import sys
 if not package_path in sys.path:
     sys.path.append(package_path)
 
-import imp
+import importlib
 import bsp_importer
 
 # unregister add-on first so it no longer shows when subsequent code fails
@@ -34,7 +34,7 @@ except RuntimeError:
     pass
 
 # force reload all custom modules to apply potential changes
-imp.reload(bsp_importer)
+importlib.reload(bsp_importer)
 
 # will be called by the if __name__ == '__main__' in the released zip
 bsp_importer.register()
