@@ -1,4 +1,9 @@
-from . import Q2BSP
+try:
+    # same directory import in released version
+    from . import Q2BSP
+except ImportError:
+    # absolute import for development
+    import Q2BSP
 import os
 import bpy
 
